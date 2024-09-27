@@ -28,6 +28,7 @@ use App\Form\Type\UserType;
 use App\Form\Type\YesNoType;
 use App\Repository\CustomerRepository;
 use App\Repository\ProjectRepository;
+use App\Repository\Query\CustomerFormTypeQuery;
 use App\Repository\Query\ProjectFormTypeQuery;
 use KimaiPlugin\PeriodInsertBundle\Entity\PeriodInsert;
 use Symfony\Component\Form\AbstractType;
@@ -49,7 +50,6 @@ class PeriodInsertType extends AbstractType
         $project = null;
         $customer = null;
         $currency = false;
-        $customerCount = $this->customers->countCustomer(true);
         $isNew = true;
 
         $this->addUser($builder, $options);
@@ -66,31 +66,32 @@ class PeriodInsertType extends AbstractType
         }
 
         $this->addBeginTime($builder, $dateTimeOptions);
-        
+        $this->addDuration($builder, $options, $isNew);
+
+        $query = new CustomerFormTypeQuery($customer);
+        $query->setUser($options['user']); // @phpstan-ignore-line
+        $qb = $this->customers->getQueryBuilderForFormType($query);
+        /** @var array<Customer> $customers */
+        $customers = $qb->getQuery()->getResult();
+        $customerCount = \count($customers);
+
         if ($this->showCustomer($options, $isNew, $customerCount)) {
-            $this->addCustomer($builder, $customer);
+            $this->addCustomer($builder, $customers, $customer);
         }
-
-        $allowCreate = (bool) $this->systemConfiguration->find('activity.allow_inline_create');
-
+        
         $this->addProject($builder, $isNew, $project, $customer);
         $this->addActivity($builder, $activity, $project, [
-            'allow_create' => $allowCreate && $options['create_activity'],
+            'allow_create' => false,
         ]);
 
-        $this->addDuration($builder, $options, $isNew);
         $this->addDescription($builder, $isNew);
         $this->addTags($builder);
+
+        $this->addDays($builder);
+        
         $this->addRates($builder, $currency, $options);
         $this->addBillable($builder, $options);
         $this->addExported($builder, $options);
-        $this->addMonday($builder);
-        $this->addTuesday($builder);
-        $this->addWednesday($builder);
-        $this->addThursday($builder);
-        $this->addFriday($builder);
-        $this->addSaturday($builder);
-        $this->addSunday($builder);
     }
 
     protected function showCustomer(array $options, bool $isNew, int $customerCount): bool
@@ -148,11 +149,42 @@ class PeriodInsertType extends AbstractType
         ]));
     }
 
-    protected function addCustomer(FormBuilderInterface $builder, ?Customer $customer = null): void
+    protected function addDuration(FormBuilderInterface $builder, array $options, bool $autofocus = false): void
+    {
+        $durationOptions = [
+            'required' => true,
+            //'toggle' => true,
+            'attr' => [
+                'placeholder' => '0:00',
+            ],
+        ];
+
+        if ($autofocus) {
+            $durationOptions['attr']['autofocus'] = 'autofocus';
+        }
+
+        $duration = $options['duration_minutes'];
+        if ($duration !== null && (int) $duration > 0) {
+            $durationOptions = array_merge($durationOptions, [
+                'preset_minutes' => $duration
+            ]);
+        }
+
+        $duration = $options['duration_hours'];
+        if ($duration !== null && (int) $duration > 0) {
+            $durationOptions = array_merge($durationOptions, [
+                'preset_hours' => $duration,
+            ]);
+        }
+
+        $builder->add('durationPerDay', DurationType::class, $durationOptions);
+    }
+
+    protected function addCustomer(FormBuilderInterface $builder, array $customers, ?Customer $customer = null): void
     {
         $builder->add('customer', CustomerType::class, [
             'query_builder_for_user' => true,
-            'customers' => $customer,
+            'customers' => $customers,
             'data' => $customer,
             'required' => false,
             'placeholder' => '',
@@ -250,37 +282,6 @@ class PeriodInsertType extends AbstractType
         );
     }
 
-    protected function addDuration(FormBuilderInterface $builder, array $options, bool $autofocus = false): void
-    {
-        $durationOptions = [
-            'required' => true,
-            //'toggle' => true,
-            'attr' => [
-                'placeholder' => '0:00',
-            ],
-        ];
-
-        if ($autofocus) {
-            $durationOptions['attr']['autofocus'] = 'autofocus';
-        }
-
-        $duration = $options['duration_minutes'];
-        if ($duration !== null && (int) $duration > 0) {
-            $durationOptions = array_merge($durationOptions, [
-                'preset_minutes' => $duration
-            ]);
-        }
-
-        $duration = $options['duration_hours'];
-        if ($duration !== null && (int) $duration > 0) {
-            $durationOptions = array_merge($durationOptions, [
-                'preset_hours' => $duration,
-            ]);
-        }
-
-        $builder->add('durationPerDay', DurationType::class, $durationOptions);
-    }
-
     protected function addDescription(FormBuilderInterface $builder, bool $isNew): void
     {
         $descriptionOptions = ['required' => false];
@@ -294,6 +295,31 @@ class PeriodInsertType extends AbstractType
     {
         $builder->add('tags', TagsType::class, [
             'required' => false,
+        ]);
+    }
+
+    protected function addDays(FormBuilderInterface $builder): void
+    {
+        $builder->add('monday', YesNoType::class, [
+            'label' => 'Insert Monday?'
+        ]);
+        $builder->add('tuesday', YesNoType::class, [
+            'label' => 'Insert Tuesday?'
+        ]);
+        $builder->add('wednesday', YesNoType::class, [
+            'label' => 'Insert Wednesday?'
+        ]);
+        $builder->add('thursday', YesNoType::class, [
+            'label' => 'Insert Thursday?'
+        ]);
+        $builder->add('friday', YesNoType::class, [
+            'label' => 'Insert Friday?'
+        ]);
+        $builder->add('saturday', YesNoType::class, [
+            'label' => 'Insert Saturday?'
+        ]);
+        $builder->add('sunday', YesNoType::class, [
+            'label' => 'Insert Sunday?'
         ]);
     }
 
@@ -330,59 +356,10 @@ class PeriodInsertType extends AbstractType
         ]);
     }
 
-    protected function addMonday(FormBuilderInterface $builder): void
-    {
-        $builder->add('monday', YesNoType::class, [
-            'label' => 'Insert Monday?'
-        ]);
-    }
-
-    protected function addTuesday(FormBuilderInterface $builder): void
-    {
-        $builder->add('tuesday', YesNoType::class, [
-            'label' => 'Insert Tuesday?'
-        ]);
-    }
-
-    protected function addWednesday(FormBuilderInterface $builder): void
-    {
-        $builder->add('wednesday', YesNoType::class, [
-            'label' => 'Insert Wednesday?'
-        ]);
-    }
-
-    protected function addThursday(FormBuilderInterface $builder): void
-    {
-        $builder->add('thursday', YesNoType::class, [
-            'label' => 'Insert Thursday?'
-        ]);
-    }
-
-    protected function addFriday(FormBuilderInterface $builder): void
-    {
-        $builder->add('friday', YesNoType::class, [
-            'label' => 'Insert Friday?'
-        ]);
-    }
-
-    protected function addSaturday(FormBuilderInterface $builder): void
-    {
-        $builder->add('saturday', YesNoType::class, [
-            'label' => 'Insert Saturday?'
-        ]);
-    }
-
-    protected function addSunday(FormBuilderInterface $builder): void
-    {
-        $builder->add('sunday', YesNoType::class, [
-            'label' => 'Insert Sunday?'
-        ]);
-    }
-
     public function configureOptions(OptionsResolver $resolver): void
     {
         $maxMinutes = $this->systemConfiguration->getTimesheetLongRunningDuration();
-        $maxHours = 8;
+        $maxHours = 10;
         if ($maxMinutes > 0) {
             $maxHours = (int) ($maxMinutes / 60);
         }
@@ -392,17 +369,17 @@ class PeriodInsertType extends AbstractType
             'csrf_protection' => true,
             'csrf_field_name' => '_token',
             'csrf_token_id' => 'period_insert',
-            'method' => 'POST',
             'include_user' => false,
             'include_rate' => true,
             'include_billable' => true,
             'include_exported' => false,
             'create_activity' => false,
-            'duration_minutes' => null,
-            'duration_hours' => $maxHours,
+            'method' => 'POST',
             'date_format' => null,
             'timezone' => date_default_timezone_get(),
             'customer' => false,
+            'duration_minutes' => null,
+            'duration_hours' => $maxHours,
             'attr' => [
                 'data-form-event' => 'kimai.timesheetUpdate',
                 'data-msg-success' => 'action.update.success',

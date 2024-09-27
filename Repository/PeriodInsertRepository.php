@@ -111,42 +111,25 @@ class PeriodInsertRepository
      */
     protected function createTimesheet(PeriodInsert $sheet, string $begin, int $duration): void
     {
-        $begin = new DateTime($begin);
-        $begin->setTime($sheet->getBeginTime()->format('H'), $sheet->getBeginTime()->format('i'));
         $entry = new Timesheet();
         $entry->setUser($sheet->getUser());
+
+        $begin = new DateTime($begin);
+        $begin->setTime($sheet->getBeginTime()->format('H'), $sheet->getBeginTime()->format('i'));
         $entry->setBegin($begin);
+        $entry->setEnd((clone $begin)->add(new DateInterval('PT' . $duration . 'S')));
+        $entry->setDuration($duration);
+
+        $entry->setProject($sheet->getProject());
+        $entry->setActivity($sheet->getActivity());
         $entry->setDescription($sheet->getDescription());
         foreach ($sheet->getTags() as $tag) {
             $entry->addTag($tag);
         }
-
-        if (null !== $sheet->getProject()) {
-            $entry->setProject($sheet->getProject());
-        }
-
-        if (null !== $sheet->getActivity()) {
-            $entry->setActivity($sheet->getActivity());
-        }
-
-        $entry->setEnd((clone $begin)->add(new DateInterval('PT' . $duration . 'S')));
-        $entry->setDuration(strtotime($entry->getEnd()->format($this->dateTimeFormat)) - strtotime($entry->getBegin()->format($this->dateTimeFormat)));
-
-        if (null !== $sheet->getFixedRate()) {
-            $entry->setFixedRate($sheet->getFixedRate());
-        }
-        
-        if (null !== $sheet->getHourlyRate()) {
-            $entry->setHourlyRate($sheet->getHourlyRate());
-        }
-
-        if (null !== $sheet->getBillableMode()) {
-            $entry->setBillableMode($sheet->getBillableMode());
-        }
-
-        if (null !== $sheet->getExported()) {
-            $entry->setExported($sheet->getExported());
-        }
+        $entry->setFixedRate($sheet->getFixedRate());
+        $entry->setHourlyRate($sheet->getHourlyRate());
+        $entry->setBillableMode($sheet->getBillableMode());
+        $entry->setExported($sheet->getExported());
 
         try {
             $this->timesheetRepository->save($entry);

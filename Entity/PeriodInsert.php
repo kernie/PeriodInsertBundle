@@ -15,9 +15,9 @@ class PeriodInsert
     private $user;
     private $beginToEnd;
     private $beginTime;
+    private $durationPerDay;
     private $project;
     private $activity;
-    private $durationPerDay;
     private $description;
     private $tags;
     private $fixedRate;
@@ -109,6 +109,22 @@ class PeriodInsert
     {
         $this->beginTime = $beginTime;
     }
+
+    /**
+     * @return mixed
+     */
+    public function getDurationPerDay()
+    {
+        return $this->durationPerDay;
+    }
+
+    /**
+     * @param mixed $durationPerDay
+     */
+    public function setDurationPerDay($durationPerDay)
+    {
+        $this->durationPerDay = $durationPerDay;
+    }
     
     /**
      * @return mixed
@@ -140,22 +156,6 @@ class PeriodInsert
     public function setActivity($activity): void
     {
         $this->activity = $activity;
-    }
-
-    /**
-     * @return mixed
-     */
-    public function getDurationPerDay()
-    {
-        return $this->durationPerDay;
-    }
-
-    /**
-     * @param mixed $durationPerDay
-     */
-    public function setDurationPerDay($durationPerDay)
-    {
-        $this->durationPerDay = $durationPerDay;
     }
 
     /**

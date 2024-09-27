@@ -20,10 +20,6 @@ class PeriodInsert
     private $activity;
     private $description;
     private $tags;
-    private $fixedRate;
-    private $hourlyRate;
-    private $exported;
-    private $billableMode;
     private $monday;
     private $tuesday;
     private $wednesday;
@@ -31,6 +27,10 @@ class PeriodInsert
     private $friday;
     private $saturday;
     private $sunday;
+    private $fixedRate;
+    private $hourlyRate;
+    private $exported;
+    private $billableMode;
 
     /**
      * PeriodInsertRepository constructor.
@@ -191,70 +191,6 @@ class PeriodInsert
     }
 
     /**
-     * @return mixed $fixedRate
-     */
-    public function getFixedRate()
-    {
-        return $this->fixedRate;
-    }
-
-    /**
-     * @param mixed $fixedRate
-     */
-    public function setFixedRate($fixedRate): void
-    {
-        $this->fixedRate = $fixedRate;
-    }
-
-    /**
-     * @return mixed $hourlyRate
-     */
-    public function getHourlyRate()
-    {
-        return $this->hourlyRate;
-    }
-
-    /**
-     * @param mixed $hourlyRate
-     */
-    public function setHourlyRate($hourlyRate): void
-    {
-        $this->hourlyRate = $hourlyRate;
-    }
-
-    /**
-     * @return mixed $billableMode
-     */
-    public function getBillableMode()
-    {
-        return $this->billableMode;
-    }
-
-    /**
-     * @param mixed $billableMode
-     */
-    public function setBillableMode($billableMode): void
-    {
-        $this->billableMode = $billableMode;
-    }
-
-    /**
-     * @return mixed $exported
-     */
-    public function getExported()
-    {
-        return $this->exported;
-    }
-
-    /**
-     * @param mixed $exported
-     */
-    public function setExported($exported): void
-    {
-        $this->exported = $exported;
-    }
-
-    /**
      * @return mixed $monday
      */
     public function getMonday()
@@ -364,5 +300,69 @@ class PeriodInsert
     public function setSunday($sunday): void
     {
         $this->sunday = $sunday;
+    }
+
+    /**
+     * @return mixed $fixedRate
+     */
+    public function getFixedRate()
+    {
+        return $this->fixedRate;
+    }
+
+    /**
+     * @param mixed $fixedRate
+     */
+    public function setFixedRate($fixedRate): void
+    {
+        $this->fixedRate = $fixedRate;
+    }
+
+    /**
+     * @return mixed $hourlyRate
+     */
+    public function getHourlyRate()
+    {
+        return $this->hourlyRate;
+    }
+
+    /**
+     * @param mixed $hourlyRate
+     */
+    public function setHourlyRate($hourlyRate): void
+    {
+        $this->hourlyRate = $hourlyRate;
+    }
+
+    /**
+     * @return mixed $billableMode
+     */
+    public function getBillableMode()
+    {
+        return $this->billableMode;
+    }
+
+    /**
+     * @param mixed $billableMode
+     */
+    public function setBillableMode($billableMode): void
+    {
+        $this->billableMode = $billableMode;
+    }
+
+    /**
+     * @return mixed $exported
+     */
+    public function getExported()
+    {
+        return $this->exported;
+    }
+
+    /**
+     * @param mixed $exported
+     */
+    public function setExported($exported): void
+    {
+        $this->exported = $exported;
     }
 }

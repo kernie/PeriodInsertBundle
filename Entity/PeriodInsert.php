@@ -29,8 +29,9 @@ class PeriodInsert
     private $sunday;
     private $fixedRate;
     private $hourlyRate;
-    private $exported;
     private $billableMode;
+    private $exported;
+    private $overlapping;
 
     /**
      * PeriodInsertRepository constructor.

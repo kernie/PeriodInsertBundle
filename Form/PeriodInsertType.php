@@ -301,25 +301,25 @@ class PeriodInsertType extends AbstractType
     protected function addDays(FormBuilderInterface $builder): void
     {
         $builder->add('monday', YesNoType::class, [
-            'label' => 'Insert Monday?'
+            'label' => 'Monday'
         ]);
         $builder->add('tuesday', YesNoType::class, [
-            'label' => 'Insert Tuesday?'
+            'label' => 'Tuesday'
         ]);
         $builder->add('wednesday', YesNoType::class, [
-            'label' => 'Insert Wednesday?'
+            'label' => 'Wednesday'
         ]);
         $builder->add('thursday', YesNoType::class, [
-            'label' => 'Insert Thursday?'
+            'label' => 'Thursday'
         ]);
         $builder->add('friday', YesNoType::class, [
-            'label' => 'Insert Friday?'
+            'label' => 'Friday'
         ]);
         $builder->add('saturday', YesNoType::class, [
-            'label' => 'Insert Saturday?'
+            'label' => 'Saturday'
         ]);
         $builder->add('sunday', YesNoType::class, [
-            'label' => 'Insert Sunday?'
+            'label' => 'Sunday'
         ]);
     }
 

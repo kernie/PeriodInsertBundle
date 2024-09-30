@@ -92,6 +92,7 @@ class PeriodInsertRepository
         }
 
         if (null !== $entity->getBillableMode()) {
+            $entry->setBillable($this->calculateBillable($entity));
             $entry->setBillableMode($entity->getBillableMode());
         }
 
@@ -104,6 +105,33 @@ class PeriodInsertRepository
         } catch (Exception $ex) {
             $this->logger->error($ex->getMessage());
         }
+    }
+
+    /**
+     * @param PeriodInsert $entity
+     * @return bool
+     */
+    protected function calculateBillable(PeriodInsert $entity): bool
+    {
+        if ($entity->getBillableMode() === 'auto') {
+            $activity = $entity->getActivity();
+            if ($activity !== null && !$activity->isBillable()) {
+                return false;
+            }
+
+            $project = $entity->getProject();
+            if ($project !== null) {
+                if (!$project->isBillable()) {
+                    return false;
+                }
+
+                $customer = $project->getCustomer();
+                if ($customer !== null && !$customer->isBillable()) {
+                    return false;
+                }
+            }
+        }
+        return $entity->getBillableMode() === 'yes';
     }
 
     /**

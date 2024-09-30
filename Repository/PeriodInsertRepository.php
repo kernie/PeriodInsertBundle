@@ -82,10 +82,22 @@ class PeriodInsertRepository
         foreach ($entity->getTags() as $tag) {
             $entry->addTag($tag);
         }
-        $entry->setFixedRate($entity->getFixedRate());
-        $entry->setHourlyRate($entity->getHourlyRate());
-        $entry->setBillableMode($entity->getBillableMode());
-        $entry->setExported($entity->getExported());
+
+        if (null !== $entity->getFixedRate()) {
+            $entry->setFixedRate($entity->getFixedRate());
+        }
+        
+        if (null !== $entity->getHourlyRate()) {
+            $entry->setHourlyRate($entity->getHourlyRate());
+        }
+
+        if (null !== $entity->getBillableMode()) {
+            $entry->setBillableMode($entity->getBillableMode());
+        }
+
+        if (null !== $entity->getExported()) {
+            $entry->setExported($entity->getExported());
+        }
 
         try {
             $this->timesheetRepository->save($entry);

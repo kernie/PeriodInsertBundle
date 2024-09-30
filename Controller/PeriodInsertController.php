@@ -87,7 +87,6 @@ class PeriodInsertController extends AbstractController
             'include_rate' => $this->isGranted('edit_rate', $entry),
             'include_billable' => $this->isGranted('edit_billable', $entry),
             'include_exported' => $this->isGranted('edit_export', $entry),
-            'create_activity' => $this->isGranted('create_activity'),
             'duration_minutes' => $this->configuration->getTimesheetIncrementDuration(),
             'timezone' => $this->getDateTimeFactory()->getTimezone()->getName(),
             'customer' => true,

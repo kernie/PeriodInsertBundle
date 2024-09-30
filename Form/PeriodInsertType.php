@@ -325,17 +325,15 @@ class PeriodInsertType extends AbstractType
 
     protected function addRates(FormBuilderInterface $builder, $currency, array $options): void
     {
-        if (!$options['include_rate']) {
-            return;
-        }
-
-        $builder
+        if ($options['include_rate']) {
+            $builder
             ->add('fixedRate', FixedRateType::class, [
                 'currency' => $currency,
             ])
             ->add('hourlyRate', HourlyRateType::class, [
                 'currency' => $currency,
             ]);
+        }
     }
 
     protected function addBillable(FormBuilderInterface $builder, array $options): void
@@ -347,13 +345,11 @@ class PeriodInsertType extends AbstractType
 
     protected function addExported(FormBuilderInterface $builder, array $options): void
     {
-        if (!$options['include_exported']) {
-            return;
+        if ($options['include_exported']) {
+            $builder->add('exported', YesNoType::class, [
+                'label' => 'exported'
+            ]);
         }
-
-        $builder->add('exported', YesNoType::class, [
-            'label' => 'exported'
-        ]);
     }
 
     public function configureOptions(OptionsResolver $resolver): void
@@ -373,7 +369,6 @@ class PeriodInsertType extends AbstractType
             'include_rate' => true,
             'include_billable' => true,
             'include_exported' => false,
-            'create_activity' => false,
             'method' => 'POST',
             'date_format' => null,
             'timezone' => date_default_timezone_get(),

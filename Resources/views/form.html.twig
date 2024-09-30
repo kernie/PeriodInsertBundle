@@ -56,26 +56,27 @@
                     {% endif %}
                 {% endblock %}
             {% endembed %}
-            {% if form.fixedRate is defined or form.hourlyRate is defined or form.billableMode is defined or form.exported is defined %}
-                {% embed '@theme/embeds/collapsible.html.twig' with {id: 'timesheet_extended_settings'} %}
-                    {% import "macros/widgets.html.twig" as widgets %}
-                    {% block title %}{{ 'extended_settings'|trans }}{% endblock %}
-                    {% block body %}
-                        {% if form.fixedRate is defined %}
-                            {{ form_row(form.fixedRate, {'row_attr': {'class': 'mb-3 ' ~ form.vars.name ~ '_row_' ~ form.fixedRate.vars.name}}) }}
-                        {% endif %}
-                        {% if form.hourlyRate is defined %}
-                            {{ form_row(form.hourlyRate, {'row_attr': {'class': 'mb-3 ' ~ form.vars.name ~ '_row_' ~ form.hourlyRate.vars.name}}) }}
-                        {% endif %}
-                        {% if form.billableMode is defined %}
-                            {{ form_row(form.billableMode, {'row_attr': {'class': 'mb-3 ' ~ form.vars.name ~ '_row_' ~ form.billableMode.vars.name}}) }}
-                        {% endif %}
-                        {% if form.exported is defined %}
-                            {{ form_row(form.exported, {'row_attr': {'class': 'mb-3 ' ~ form.vars.name ~ '_row_' ~ form.exported.vars.name}}) }}
-                        {% endif %}
-                    {% endblock %}
-                {% endembed %}
-            {% endif %}
+            {% embed '@theme/embeds/collapsible.html.twig' with {id: 'timesheet_extended_settings'} %}
+                {% import "macros/widgets.html.twig" as widgets %}
+                {% block title %}{{ 'extended_settings'|trans }}{% endblock %}
+                {% block body %}
+                    {% if form.fixedRate is defined %}
+                        {{ form_row(form.fixedRate, {'row_attr': {'class': 'mb-3 ' ~ form.vars.name ~ '_row_' ~ form.fixedRate.vars.name}}) }}
+                    {% endif %}
+                    {% if form.hourlyRate is defined %}
+                        {{ form_row(form.hourlyRate, {'row_attr': {'class': 'mb-3 ' ~ form.vars.name ~ '_row_' ~ form.hourlyRate.vars.name}}) }}
+                    {% endif %}
+                    {% if form.billableMode is defined %}
+                        {{ form_row(form.billableMode, {'row_attr': {'class': 'mb-3 ' ~ form.vars.name ~ '_row_' ~ form.billableMode.vars.name}}) }}
+                    {% endif %}
+                    {% if form.exported is defined %}
+                        {{ form_row(form.exported, {'row_attr': {'class': 'mb-3 ' ~ form.vars.name ~ '_row_' ~ form.exported.vars.name}}) }}
+                    {% endif %}
+                    {% if form.overlapping is defined %}
+                        {{ form_row(form.overlapping, {'row_attr': {'class': 'mb-3 ' ~ form.vars.name ~ '_row_' ~ form.overlapping.vars.name}}) }}
+                    {% endif %}
+                {% endblock %}
+            {% endembed %}
 
             {{ form_rest(form) }}
         {% endblock %}

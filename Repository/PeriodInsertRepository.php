@@ -60,6 +60,23 @@ class PeriodInsertRepository
 
     /**
      * @param PeriodInsert $entity
+     * @return string
+     */
+    public function findOverlappingTimeEntry(PeriodInsert $entity): string
+    {   
+        $day = (int)$entity->getBegin()->format('w');
+        $numberOfDays = $entity->getEnd()->diff($entity->getBegin())->format("%a") + $day;
+        for ($begin = clone $entity->getBegin(); $day <= $numberOfDays; $day++, $begin->modify('+1 day')) {
+            if ($entity->getDay($day) && $this->timesheetRepository->getStatistic
+                ('amount', $begin, (clone $begin)->modify('+1 day'), $entity->getUser(), null)) {
+                return $begin->format('m/d/Y');
+            }
+        }
+        return '';
+    }
+
+    /**
+     * @param PeriodInsert $entity
      * @return void
      * @throws Exception
      */

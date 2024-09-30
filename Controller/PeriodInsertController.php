@@ -54,13 +54,19 @@ class PeriodInsertController extends AbstractController
                 $this->flashError('Could not find a day to insert in the given time range. Please reselect the time range or days to insert.');
             }
             else {
-                try {
-                    $this->repository->saveTimesheet($entity);
-                    $this->flashSuccess('action.update.success');
+                $overlap = $this->repository->findOverlappingTimeEntry($entity);
+                if (!$entity->getOverlapping() && $overlap !== '') {
+                    $this->flashError('There is already a time entry on ' . $overlap . '!');
+                }
+                else {
+                    try {
+                        $this->repository->saveTimesheet($entity);
+                        $this->flashSuccess('action.update.success');
 
-                    return $this->redirectToRoute('period_insert');
-                } catch (Exception $ex) {
-                    $this->flashUpdateException($ex);
+                        return $this->redirectToRoute('period_insert');
+                    } catch (Exception $ex) {
+                        $this->flashUpdateException($ex);
+                    }
                 }
             }
         }

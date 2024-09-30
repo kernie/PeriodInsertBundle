@@ -11,7 +11,6 @@ namespace KimaiPlugin\PeriodInsertBundle\Repository;
 use App\Entity\Timesheet;
 use App\Repository\TimesheetRepository;
 use DateInterval;
-use DatePeriod;
 use DateTime;
 use Exception;
 use KimaiPlugin\PeriodInsertBundle\Entity\PeriodInsert;
@@ -24,13 +23,13 @@ class PeriodInsertRepository
      */
     private $timesheetRepository;
     /**
-     * @var string
-     */
-    private $dateTimeFormat = 'Y-m-d H:i:s';
-    /**
      * @var LoggerInterface
      */
     private $logger;
+    /**
+     * @var int
+     */
+    private $secondsInADay = 24*60*60;
 
     /**
      * PeriodInsertRepository constructor.
@@ -50,86 +49,43 @@ class PeriodInsertRepository
      */
     public function saveTimesheet(PeriodInsert $entity)
     {
-        $daysToSave = $this->getDatesFromRange($entity->getBegin(), $entity->getEnd());
-
-        foreach ($daysToSave AS $dayToSave) {
-            $day = $this->getDay($dayToSave);
-            if ($entity->getMonday() && $day === 1
-                || $entity->getTuesday() && $day === 2
-                || $entity->getWednesday() && $day === 3
-                || $entity->getThursday() && $day === 4
-                || $entity->getFriday() && $day === 5
-                || $entity->getSaturday() && $day === 6
-                || $entity->getSunday() && $day === 0)
-            {
-                $this->createTimesheet($entity, $dayToSave, $entity->getDurationPerDay());
+        $day = (int)$entity->getBegin()->format('w');
+        $numberOfDays = $entity->getEnd()->diff($entity->getBegin())->format("%a") + $day;
+        $begin = clone $entity->getBegin();
+        $begin->setTime($entity->getBeginTime()->format('H'), $entity->getBeginTime()->format('i'));
+        for (; $day <= $numberOfDays; $day++, $begin->modify('+1 day')) {
+            if ($entity->getDay($day)) {
+                $this->createTimesheet($entity, $begin, $entity->getDurationPerDay() % $this->secondsInADay);
             }
         }
     }
 
     /**
-     * @param $start
-     * @param DateTime $end
-     * @param string $format
-     * @return array
-     * @throws Exception
-     */
-    private function getDatesFromRange(DateTime $start, DateTime $end, $format = 'Y-m-d'): array
-    {
-        $start = $start->format($format);
-        $end = $end->format($format);
-        $return = [];
-        $interval = new DateInterval('P1D');
-        $realEnd = new DateTime($end);
-        $realEnd->add($interval);
-        $period = new DatePeriod(new DateTime($start), $interval, $realEnd);
-
-        foreach ($period as $date) {
-            $return[] = $date->format($format);
-        }
-
-        return $return;
-    }
-
-    /**
-     * @param string $day
-     * @return int
-     * @throws Exception
-     */
-    private function getDay(string $day): int
-    {
-        return (int)(new DateTime($day))->format('w');
-    }
-
-    /**
-     * @param PeriodInsert $sheet
-     * @param string $begin
+     * @param PeriodInsert $entity
+     * @param DateTime $begin
      * @param int $duration
-     * @param int $minutesPerDay
      * @return void
      * @throws Exception
      */
-    protected function createTimesheet(PeriodInsert $sheet, string $begin, int $duration): void
+    protected function createTimesheet(PeriodInsert $entity, DateTime $begin, int $duration): void
     {
         $entry = new Timesheet();
-        $entry->setUser($sheet->getUser());
+        $entry->setUser($entity->getUser());
 
-        $begin = new DateTime($begin);
-        $begin->setTime($sheet->getBeginTime()->format('H'), $sheet->getBeginTime()->format('i'));
         $entry->setBegin($begin);
         $entry->setEnd((clone $begin)->add(new DateInterval('PT' . $duration . 'S')));
         $entry->setDuration($duration);
 
-        $entry->setProject($sheet->getProject());
-        $entry->setActivity($sheet->getActivity());
-        $entry->setDescription($sheet->getDescription());
-        foreach ($sheet->getTags() as $tag) {
+        $entry->setProject($entity->getProject());
+        $entry->setActivity($entity->getActivity());
+        $entry->setDescription($entity->getDescription());
+        foreach ($entity->getTags() as $tag) {
             $entry->addTag($tag);
         }
-        $entry->setFixedRate($sheet->getFixedRate());
-        $entry->setHourlyRate($sheet->getHourlyRate());
-        $entry->setBillableMode($sheet->getBillableMode());
-        $entry->setExported($sheet->getExported());
+        $entry->setFixedRate($entity->getFixedRate());
+        $entry->setHourlyRate($entity->getHourlyRate());
+        $entry->setBillableMode($entity->getBillableMode());
+        $entry->setExported($entity->getExported());
 
         try {
             $this->timesheetRepository->save($entry);

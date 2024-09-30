@@ -20,31 +20,19 @@ class PeriodInsert
     private $activity;
     private $description;
     private $tags;
-    private $monday;
-    private $tuesday;
-    private $wednesday;
-    private $thursday;
-    private $friday;
-    private $saturday;
-    private $sunday;
+    private $days;
     private $fixedRate;
     private $hourlyRate;
     private $billableMode;
     private $exported;
-    private $overlapping;
 
     /**
      * PeriodInsertRepository constructor.
      */
     public function __construct()
     {
-        $this->monday = true;
-        $this->tuesday = true;
-        $this->wednesday = true;
-        $this->thursday = true;
-        $this->friday = true;
-        $this->saturday = true;
-        $this->sunday = true;
+        $this->days = array_fill(0, 7, true);
+        $this->overlapping = false;
     }
 
     /**
@@ -192,11 +180,27 @@ class PeriodInsert
     }
 
     /**
+     * @return mixed
+     */
+    public function getDays()
+    {
+        return $this->days;
+    }
+
+    /**
+     * @return mixed
+     */
+    public function getDay(int $day)
+    {
+        return $this->days[$day % 7];
+    }
+
+    /**
      * @return mixed $monday
      */
     public function getMonday()
     {
-        return $this->monday;
+        return $this->days[1];
     }
 
     /**
@@ -204,7 +208,7 @@ class PeriodInsert
      */
     public function setMonday($monday): void
     {
-        $this->monday = $monday;
+        $this->days[1] = $monday;
     }
 
     /**
@@ -212,7 +216,7 @@ class PeriodInsert
      */
     public function getTuesday()
     {
-        return $this->tuesday;
+        return $this->days[2];
     }
 
     /**
@@ -220,7 +224,7 @@ class PeriodInsert
      */
     public function setTuesday($tuesday): void
     {
-        $this->tuesday = $tuesday;
+        $this->days[2] = $tuesday;
     }
 
     /**
@@ -228,7 +232,7 @@ class PeriodInsert
      */
     public function getWednesday()
     {
-        return $this->wednesday;
+        return $this->days[3];
     }
 
     /**
@@ -236,7 +240,7 @@ class PeriodInsert
      */
     public function setWednesday($wednesday): void
     {
-        $this->wednesday = $wednesday;
+        $this->days[3] = $wednesday;
     }
 
     /**
@@ -244,7 +248,7 @@ class PeriodInsert
      */
     public function getThursday()
     {
-        return $this->thursday;
+        return $this->days[4];
     }
 
     /**
@@ -252,7 +256,7 @@ class PeriodInsert
      */
     public function setThursday($thursday): void
     {
-        $this->thursday = $thursday;
+        $this->days[4] = $thursday;
     }
 
     /**
@@ -260,7 +264,7 @@ class PeriodInsert
      */
     public function getFriday()
     {
-        return $this->friday;
+        return $this->days[5];
     }
 
     /**
@@ -268,7 +272,7 @@ class PeriodInsert
      */
     public function setFriday($friday): void
     {
-        $this->friday = $friday;
+        $this->days[5] = $friday;
     }
 
     /**
@@ -276,7 +280,7 @@ class PeriodInsert
      */
     public function getSaturday()
     {
-        return $this->saturday;
+        return $this->days[6];
     }
 
     /**
@@ -284,7 +288,7 @@ class PeriodInsert
      */
     public function setSaturday($saturday): void
     {
-        $this->saturday = $saturday;
+        $this->days[6] = $saturday;
     }
 
     /**
@@ -292,7 +296,7 @@ class PeriodInsert
      */
     public function getSunday()
     {
-        return $this->sunday;
+        return $this->days[0];
     }
 
     /**
@@ -300,7 +304,7 @@ class PeriodInsert
      */
     public function setSunday($sunday): void
     {
-        $this->sunday = $sunday;
+        $this->days[0] = $sunday;
     }
 
     /**

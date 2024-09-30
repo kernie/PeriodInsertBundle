@@ -41,6 +41,22 @@ class PeriodInsertRepository
         $this->timesheetRepository = $timesheetRepository;
         $this->logger = $logger;
     }
+    
+    /**
+     * @param PeriodInsert $entity
+     * @return bool
+     */
+    public function findDayToInsert(PeriodInsert $entity): bool
+    {
+        $day = (int)$entity->getBegin()->format('w');
+        $numberOfDays = $entity->getEnd()->diff($entity->getBegin())->format("%a") + $day;
+        for (; $day <= $numberOfDays; $day++) {
+            if ($entity->getDay($day)) {
+                return true;
+            }
+        }
+        return false;
+    }
 
     /**
      * @param PeriodInsert $entity

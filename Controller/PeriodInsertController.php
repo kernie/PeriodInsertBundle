@@ -47,8 +47,13 @@ class PeriodInsertController extends AbstractController
         if ($form->isSubmitted() && $form->isValid()) {
             /** @var PeriodInsert $entity */
             $entity = $form->getData();
-
-            if ($entity->getDurationPerDay() > 0) {
+            if (!in_array(true, $entity->getDays())) {
+                $this->flashError('Please select a day to insert.');
+            }
+            else if (!$this->repository->findDayToInsert($entity)) {
+                $this->flashError('Could not find a day to insert in the given time range. Please reselect the time range or days to insert.');
+            }
+            else {
                 try {
                     $this->repository->saveTimesheet($entity);
                     $this->flashSuccess('action.update.success');
@@ -57,9 +62,6 @@ class PeriodInsertController extends AbstractController
                 } catch (Exception $ex) {
                     $this->flashUpdateException($ex);
                 }
-            }
-            else {
-                $this->flashError('need_timerange');
             }
         }
 

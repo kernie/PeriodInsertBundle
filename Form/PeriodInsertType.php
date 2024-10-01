@@ -92,7 +92,6 @@ class PeriodInsertType extends AbstractType
         $this->addRates($builder, $currency, $options);
         $this->addBillable($builder, $options);
         $this->addExported($builder, $options);
-        $this->addOverlapping($builder);
     }
 
     protected function showCustomer(array $options, bool $isNew, int $customerCount): bool
@@ -351,13 +350,6 @@ class PeriodInsertType extends AbstractType
                 'label' => 'exported'
             ]);
         }
-    }
-
-    protected function addOverlapping(FormBuilderInterface $builder): void
-    {
-        $builder->add('overlapping', YesNoType::class, [
-            'label' => 'Allow overlapping time entries'
-        ]);
     }
 
     public function configureOptions(OptionsResolver $resolver): void

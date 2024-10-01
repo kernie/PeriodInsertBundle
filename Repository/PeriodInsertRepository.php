@@ -44,18 +44,18 @@ class PeriodInsertRepository
     
     /**
      * @param PeriodInsert $entity
-     * @return bool
+     * @return string
      */
-    public function findDayToInsert(PeriodInsert $entity): bool
+    public function findDayToInsert(PeriodInsert $entity): string
     {
-        $day = (int)$entity->getBegin()->format('w');
-        $numberOfDays = $entity->getEnd()->diff($entity->getBegin())->format("%a") + $day;
-        for (; $day <= $numberOfDays; $day++) {
+        $day = (int)$entity->getEnd()->format('w');
+        $numberOfDays = $entity->getEnd()->diff($entity->getBegin())->format("%r%a") - $day;
+        for ($end = clone $entity->getEnd(); $day >= $numberOfDays; $day--, $end->modify('-1 day')) {
             if ($entity->getDay($day)) {
-                return true;
+                return $end->format('Y-m-d');
             }
         }
-        return false;
+        return '';
     }
 
     /**
@@ -66,9 +66,11 @@ class PeriodInsertRepository
     {   
         $day = (int)$entity->getBegin()->format('w');
         $numberOfDays = $entity->getEnd()->diff($entity->getBegin())->format("%a") + $day;
-        for ($begin = clone $entity->getBegin(); $day <= $numberOfDays; $day++, $begin->modify('+1 day')) {
-            if ($entity->getDay($day) && $this->timesheetRepository->getStatistic
-                ('amount', $begin, (clone $begin)->modify('+1 day'), $entity->getUser(), null)) {
+        $begin = clone $entity->getBegin();
+        $begin->setTime($entity->getBeginTime()->format('H'), $entity->getBeginTime()->format('i'));
+        for (; $day <= $numberOfDays; $day++, $begin->modify('+1 day')) {
+            if ($entity->getDay($day) && $this->timesheetRepository->hasRecordForTime(
+                $this->createTimesheet($entity, $begin, $entity->getDurationPerDay() % $this->secondsInADay))) {
                 return $begin->format('m/d/Y');
             }
         }
@@ -78,7 +80,6 @@ class PeriodInsertRepository
     /**
      * @param PeriodInsert $entity
      * @return void
-     * @throws Exception
      */
     public function saveTimesheet(PeriodInsert $entity)
     {
@@ -88,7 +89,7 @@ class PeriodInsertRepository
         $begin->setTime($entity->getBeginTime()->format('H'), $entity->getBeginTime()->format('i'));
         for (; $day <= $numberOfDays; $day++, $begin->modify('+1 day')) {
             if ($entity->getDay($day)) {
-                $this->createTimesheet($entity, $begin, $entity->getDurationPerDay() % $this->secondsInADay);
+                $this->timesheetRepository->save($this->createTimesheet($entity, $begin, $entity->getDurationPerDay() % $this->secondsInADay));
             }
         }
     }
@@ -97,16 +98,15 @@ class PeriodInsertRepository
      * @param PeriodInsert $entity
      * @param DateTime $begin
      * @param int $duration
-     * @return void
-     * @throws Exception
+     * @return Timesheet
      */
-    protected function createTimesheet(PeriodInsert $entity, DateTime $begin, int $duration): void
+    protected function createTimesheet(PeriodInsert $entity, DateTime $begin, int $duration): Timesheet
     {
         $entry = new Timesheet();
         $entry->setUser($entity->getUser());
 
         $entry->setBegin($begin);
-        $entry->setEnd((clone $begin)->add(new DateInterval('PT' . $duration . 'S')));
+        $entry->setEnd((clone $begin)->modify('+' . $duration . ' seconds'));
         $entry->setDuration($duration);
 
         $entry->setProject($entity->getProject());
@@ -132,12 +132,7 @@ class PeriodInsertRepository
         if (null !== $entity->getExported()) {
             $entry->setExported($entity->getExported());
         }
-
-        try {
-            $this->timesheetRepository->save($entry);
-        } catch (Exception $ex) {
-            $this->logger->error($ex->getMessage());
-        }
+        return $entry;
     }
 
     /**

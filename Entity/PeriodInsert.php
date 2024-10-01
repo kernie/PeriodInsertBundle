@@ -25,7 +25,6 @@ class PeriodInsert
     private $hourlyRate;
     private $billableMode;
     private $exported;
-    private $overlapping;
 
     /**
      * PeriodInsertRepository constructor.
@@ -33,7 +32,6 @@ class PeriodInsert
     public function __construct()
     {
         $this->days = array_fill(0, 7, true);
-        $this->overlapping = false;
     }
 
     /**
@@ -193,7 +191,8 @@ class PeriodInsert
      */
     public function getDay(int $day)
     {
-        return $this->days[$day % 7];
+        $day = $day % 7;
+        return $this->days[$day >= 0 ? $day : $day + 7];
     }
 
     /**
@@ -370,21 +369,5 @@ class PeriodInsert
     public function setExported($exported): void
     {
         $this->exported = $exported;
-    }
-
-    /**
-     * @return mixed $overlapping
-     */
-    public function getOverlapping()
-    {
-        return $this->overlapping;
-    }
-
-    /**
-     * @param mixed $overlapping
-     */
-    public function setOverlapping($overlapping): void
-    {
-        $this->overlapping = $overlapping;
     }
 }

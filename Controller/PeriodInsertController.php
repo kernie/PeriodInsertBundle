@@ -18,6 +18,7 @@ use Exception;
 use KimaiPlugin\PeriodInsertBundle\Entity\PeriodInsert;
 use KimaiPlugin\PeriodInsertBundle\Form\PeriodInsertType;
 use KimaiPlugin\PeriodInsertBundle\Repository\PeriodInsertRepository;
+use Symfony\Component\Form\FormInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
@@ -30,8 +31,8 @@ class PeriodInsertController extends AbstractController
     public function __construct(
         protected PeriodInsertRepository $repository,
         protected TimesheetService $service,
-        protected SystemConfiguration $configuration)
-    {
+        protected SystemConfiguration $configuration
+    ) {
     }
 
     #[Route(path: '', name: 'period_insert', methods: ['GET', 'POST'])]
@@ -50,7 +51,7 @@ class PeriodInsertController extends AbstractController
             /** @var PeriodInsert $entity */
             $entity = $form->getData();
             $entity->setTimes();
-
+            
             $dayToInsert = $this->findDayToInsert($entity);
             if ($dayToInsert === '') {
                 $this->flashError('Could not find a day to insert in the given time range. Please reselect the time range or days to insert.');
@@ -58,7 +59,7 @@ class PeriodInsertController extends AbstractController
             else if (!$this->configuration->isTimesheetAllowFutureTimes() && ($dayToInsert > date('Y-m-d') || $this->checkTimestamp($entity))) {
                 $this->flashError('The time range cannot be in the future.');
             }
-            else if (!$this->configuration->isTimesheetAllowZeroDuration() && $entity->getDurationPerDay() === 0) {
+            else if (!$this->configuration->isTimesheetAllowZeroDuration() && $entity->getDuration() === 0) {
                 $this->flashError('Duration cannot be zero.');
             }
             else {
@@ -79,13 +80,10 @@ class PeriodInsertController extends AbstractController
             }
         }
 
-        $page = new PageSetup('periodinsert.title');
-        $page->setHelp('https://www.kimai.org/store/lnngyn-period-insert-bundle.html');
-
         return $this->render('@PeriodInsert/index.html.twig', [
-            'page_setup' => $page,
+            'page_setup' => $this->createPageSetup(),
             'route_back' => 'timesheet',
-            'entity' => $entity,
+            'entity' => 'entity',
             'form' => $form->createView(),
         ]);
     }
@@ -126,7 +124,7 @@ class PeriodInsertController extends AbstractController
      * @param Timesheet $entry
      * @return FormInterface
      */
-    protected function getInsertForm(PeriodInsert $entity, Timesheet $entry)
+    protected function getInsertForm(PeriodInsert $entity, Timesheet $entry): FormInterface
     {
         return $this->createForm(PeriodInsertType::class, $entity, [
             'action' => $this->generateUrl('period_insert'),
@@ -139,5 +137,16 @@ class PeriodInsertController extends AbstractController
             'timezone' => $this->getDateTimeFactory()->getTimezone()->getName(),
             'customer' => true,
         ]);
+    }
+
+    /**
+     * @return PageSetup
+     */
+    protected function createPageSetup(): PageSetup
+    {
+        $page = new PageSetup('periodinsert.title');
+        $page->setHelp('https://www.kimai.org/store/lnngyn-period-insert-bundle.html');
+
+        return $page;
     }
 }

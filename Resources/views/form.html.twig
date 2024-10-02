@@ -8,11 +8,11 @@
             {% if form.beginToEnd is defined %}
                 {{ form_row(form.beginToEnd, {'row_attr': {'class': 'mb-3 ' ~ form.vars.name ~ '_row_' ~ form.beginToEnd.vars.name}}) }}
             {% endif %}
-            {% if form.beginTime is defined %}
-                {{ form_row(form.beginTime, {'row_attr': {'class': 'mb-3 ' ~ form.vars.name ~ '_row_' ~ form.beginTime.vars.name}}) }}
+            {% if form.begin_time is defined %}
+                {{ form_row(form.begin_time, {'row_attr': {'class': 'mb-3 ' ~ form.vars.name ~ '_row_' ~ form.begin_time.vars.name}}) }}
             {% endif %}
-            {% if form.durationPerDay is defined %}
-                {{ form_row(form.durationPerDay, {'row_attr': {'class': 'mb-3 ' ~ form.vars.name ~ '_row_' ~ form.durationPerDay.vars.name}}) }}
+            {% if form.duration is defined %}
+                {{ form_row(form.duration, {'row_attr': {'class': 'mb-3 ' ~ form.vars.name ~ '_row_' ~ form.duration.vars.name}}) }}
             {% endif %}
             {% if form.customer is defined %}
                 {{ form_row(form.customer, {'row_attr': {'class': 'mb-3 ' ~ form.vars.name ~ '_row_' ~ form.customer.vars.name}}) }}

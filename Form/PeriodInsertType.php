@@ -144,7 +144,7 @@ class PeriodInsertType extends AbstractType
     {
         $timeOptions = $dateTimeOptions;
 
-        $builder->add('beginTime', TimePickerType::class, array_merge($timeOptions, [
+        $builder->add('begin_time', TimePickerType::class, array_merge($timeOptions, [
             'label' => 'Begin',
             'constraints' => [
                 new NotBlank()
@@ -180,7 +180,7 @@ class PeriodInsertType extends AbstractType
             ]);
         }
 
-        $builder->add('durationPerDay', DurationType::class, $durationOptions);
+        $builder->add('duration', DurationType::class, $durationOptions);
     }
 
     protected function addCustomer(FormBuilderInterface $builder, array $customers, ?Customer $customer = null): void

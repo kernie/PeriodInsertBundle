@@ -16,7 +16,7 @@ class PeriodInsert
     private $beginToEnd;
     private $beginTime;
     private $endTime;
-    private $durationPerDay;
+    private $duration;
     private $project;
     private $activity;
     private $description;
@@ -110,24 +110,24 @@ class PeriodInsert
     public function setTimes(): void
     {
         $this->beginToEnd->getBegin()->setTime($this->beginTime->format('H'), $this->beginTime->format('i'));
-        $this->endTime = (clone $this->beginTime)->modify('+' . $this->durationPerDay . ' seconds');
+        $this->endTime = (clone $this->beginTime)->modify('+' . $this->duration . ' seconds');
     }
 
     /**
      * @return mixed
      */
-    public function getDurationPerDay()
+    public function getDuration()
     {
-        return $this->durationPerDay;
+        return $this->duration;
     }
 
     /**
-     * @param mixed $durationPerDay
+     * @param mixed $duration
      */
-    public function setDurationPerDay($durationPerDay)
+    public function setDuration($duration)
     {
         $secondsInADay = 24*60*60;
-        $this->durationPerDay = $durationPerDay % $secondsInADay;
+        $this->duration = $duration % $secondsInADay;
     }
     
     /**

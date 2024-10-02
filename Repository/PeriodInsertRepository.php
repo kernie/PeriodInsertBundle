@@ -75,7 +75,7 @@ class PeriodInsertRepository
 
         $entry->setBegin((clone $begin));
         $entry->setEnd((clone $begin)->setTime($entity->getEndTime()->format('H'), $entity->getEndTime()->format('i')));
-        $entry->setDuration($entity->getDurationPerDay());
+        $entry->setDuration($entity->getDuration());
 
         $entry->setProject($entity->getProject());
         $entry->setActivity($entity->getActivity());

@@ -56,7 +56,8 @@ class PeriodInsertController extends AbstractController
             if ($dayToInsert === '') {
                 $this->flashError('Could not find a day to insert in the given time range. Please reselect the time range or days to insert.');
             }
-            else if (!$this->configuration->isTimesheetAllowFutureTimes() && ($dayToInsert > date('Y-m-d') || $this->checkTimestamp($entity))) {
+            else if (!$this->configuration->isTimesheetAllowFutureTimes() &&
+                ($dayToInsert > date('Y-m-d') || $dayToInsert === date('Y-m-d') && $this->checkTimestamp($entity))) {
                 $this->flashError('The time range cannot be in the future.');
             }
             else if (!$this->configuration->isTimesheetAllowZeroDuration() && $entity->getDuration() === 0) {

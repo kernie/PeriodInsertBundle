@@ -14,6 +14,7 @@ use App\Controller\AbstractController;
 use App\Entity\Timesheet;
 use App\Timesheet\TimesheetService;
 use App\Utils\PageSetup;
+use Exception;
 use KimaiPlugin\PeriodInsertBundle\Entity\PeriodInsert;
 use KimaiPlugin\PeriodInsertBundle\Form\PeriodInsertType;
 use KimaiPlugin\PeriodInsertBundle\Repository\PeriodInsertRepository;
@@ -40,6 +41,7 @@ class PeriodInsertController extends AbstractController
 
         $entity = $this->repository->getTimesheet();
         $entity->setUser($this->getUser());
+        $entity->setBeginTime($entry->getBegin());
 
         $form = $this->getInsertForm($entity, $entry);
         $form->handleRequest($request);
@@ -47,11 +49,13 @@ class PeriodInsertController extends AbstractController
         if ($form->isSubmitted() && $form->isValid()) {
             /** @var PeriodInsert $entity */
             $entity = $form->getData();
-            $dayToInsert = $this->repository->findDayToInsert($entity);
+            $entity->setTimes();
+
+            $dayToInsert = $this->findDayToInsert($entity);
             if ($dayToInsert === '') {
                 $this->flashError('Could not find a day to insert in the given time range. Please reselect the time range or days to insert.');
             }
-            else if (!$this->configuration->isTimesheetAllowFutureTimes() && $dayToInsert > date('Y-m-d')) {
+            else if (!$this->configuration->isTimesheetAllowFutureTimes() && ($dayToInsert > date('Y-m-d') || $this->checkTimestamp($entity))) {
                 $this->flashError('The time range cannot be in the future.');
             }
             else if (!$this->configuration->isTimesheetAllowZeroDuration() && $entity->getDurationPerDay() === 0) {
@@ -88,6 +92,37 @@ class PeriodInsertController extends AbstractController
 
     /**
      * @param PeriodInsert $entity
+     * @return bool
+     */
+    protected function checkTimestamp(PeriodInsert $entity): bool
+    {
+        $now = new \DateTime('now', $entity->getBeginTime()->getTimezone());
+
+        // allow configured default rounding time + 1 minute
+        $nowBeginTs = $now->getTimestamp() + ($this->configuration->getTimesheetDefaultRoundingBegin() * 60) + 60;
+        $nowEndTs = $now->getTimestamp() + ($this->configuration->getTimesheetDefaultRoundingEnd() * 60) + 60;
+
+        return $nowBeginTs < $entity->getBeginTime()->getTimestamp() || $nowEndTs < $entity->getEndTime()->getTimestamp();
+    }
+
+    /**
+     * @param PeriodInsert $entity
+     * @return string
+     */
+    protected function findDayToInsert(PeriodInsert $entity): string
+    {
+        $day = (int)$entity->getEnd()->format('w') - 7;
+        $numberOfDays = $entity->getEnd()->diff($entity->getBegin())->format("%r%a") + $day;
+        for ($end = clone $entity->getEnd(); $day >= $numberOfDays; $day--, $end->modify('-1 day')) {
+            if ($entity->getDay($day)) {
+                return $end->format('Y-m-d');
+            }
+        }
+        return '';
+    }
+
+    /**
+     * @param PeriodInsert $entity
      * @param Timesheet $entry
      * @return FormInterface
      */
@@ -99,6 +134,7 @@ class PeriodInsertController extends AbstractController
             'include_rate' => $this->isGranted('edit_rate', $entry),
             'include_billable' => $this->isGranted('edit_billable', $entry),
             'include_exported' => $this->isGranted('edit_export', $entry),
+            'allow_begin_datetime' => $this->service->getActiveTrackingMode()->canEditBegin(),
             'duration_minutes' => $this->configuration->getTimesheetIncrementDuration(),
             'timezone' => $this->getDateTimeFactory()->getTimezone()->getName(),
             'customer' => true,

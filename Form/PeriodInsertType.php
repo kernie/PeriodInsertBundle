@@ -65,7 +65,10 @@ class PeriodInsertType extends AbstractType
             $dateTimeOptions['format'] = $options['date_format'];
         }
 
-        $this->addBeginTime($builder, $dateTimeOptions);
+        if ($options['allow_begin_datetime']) {
+            $this->addBeginTime($builder, $dateTimeOptions);
+        }
+        
         $this->addDuration($builder, $options, $isNew);
 
         $query = new CustomerFormTypeQuery($customer);
@@ -372,7 +375,8 @@ class PeriodInsertType extends AbstractType
             'method' => 'POST',
             'date_format' => null,
             'timezone' => date_default_timezone_get(),
-            'customer' => false,
+            'customer' => false, // for API usage
+            'allow_begin_datetime' => true,
             'duration_minutes' => null,
             'duration_hours' => $maxHours,
             'attr' => [

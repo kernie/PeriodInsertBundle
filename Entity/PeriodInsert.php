@@ -15,6 +15,7 @@ class PeriodInsert
     private $user;
     private $beginToEnd;
     private $beginTime;
+    private $endTime;
     private $durationPerDay;
     private $project;
     private $activity;
@@ -71,7 +72,7 @@ class PeriodInsert
      */
     public function getBegin()
     {
-        return $this->getBeginToEnd()->getBegin();
+        return $this->beginToEnd->getBegin();
     }
 
     /**
@@ -79,7 +80,7 @@ class PeriodInsert
      */
     public function getEnd()
     {
-        return $this->getBeginToEnd()->getEnd();
+        return $this->beginToEnd->getEnd();
     }
 
     /**
@@ -101,6 +102,20 @@ class PeriodInsert
     /**
      * @return mixed
      */
+    public function getEndTime()
+    {
+        return $this->endTime;
+    }
+
+    public function setTimes(): void
+    {
+        $this->beginToEnd->getBegin()->setTime($this->beginTime->format('H'), $this->beginTime->format('i'));
+        $this->endTime = (clone $this->beginTime)->modify('+' . $this->durationPerDay . ' seconds');
+    }
+
+    /**
+     * @return mixed
+     */
     public function getDurationPerDay()
     {
         return $this->durationPerDay;
@@ -111,7 +126,8 @@ class PeriodInsert
      */
     public function setDurationPerDay($durationPerDay)
     {
-        $this->durationPerDay = $durationPerDay;
+        $secondsInADay = 24*60*60;
+        $this->durationPerDay = $durationPerDay % $secondsInADay;
     }
     
     /**
@@ -176,14 +192,6 @@ class PeriodInsert
     public function setTags($tags): void
     {
         $this->tags = $tags;
-    }
-
-    /**
-     * @return mixed
-     */
-    public function getDays()
-    {
-        return $this->days;
     }
 
     /**

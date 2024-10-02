@@ -10,11 +10,8 @@ namespace KimaiPlugin\PeriodInsertBundle\Repository;
 
 use App\Entity\Timesheet;
 use App\Repository\TimesheetRepository;
-use DateInterval;
 use DateTime;
-use Exception;
 use KimaiPlugin\PeriodInsertBundle\Entity\PeriodInsert;
-use Psr\Log\LoggerInterface;
 
 class PeriodInsertRepository
 {
@@ -22,40 +19,14 @@ class PeriodInsertRepository
      * @var TimesheetRepository
      */
     private $timesheetRepository;
-    /**
-     * @var LoggerInterface
-     */
-    private $logger;
-    /**
-     * @var int
-     */
-    private $secondsInADay = 24*60*60;
 
     /**
      * PeriodInsertRepository constructor.
      * @param TimesheetRepository $timesheetRepository
-     * @param LoggerInterface $logger
      */
-    public function __construct(TimesheetRepository $timesheetRepository, LoggerInterface $logger)
+    public function __construct(TimesheetRepository $timesheetRepository)
     {
         $this->timesheetRepository = $timesheetRepository;
-        $this->logger = $logger;
-    }
-    
-    /**
-     * @param PeriodInsert $entity
-     * @return string
-     */
-    public function findDayToInsert(PeriodInsert $entity): string
-    {
-        $day = (int)$entity->getEnd()->format('w');
-        $numberOfDays = $entity->getEnd()->diff($entity->getBegin())->format("%r%a") - $day;
-        for ($end = clone $entity->getEnd(); $day >= $numberOfDays; $day--, $end->modify('-1 day')) {
-            if ($entity->getDay($day)) {
-                return $end->format('Y-m-d');
-            }
-        }
-        return '';
     }
 
     /**
@@ -67,10 +38,9 @@ class PeriodInsertRepository
         $day = (int)$entity->getBegin()->format('w');
         $numberOfDays = $entity->getEnd()->diff($entity->getBegin())->format("%a") + $day;
         $begin = clone $entity->getBegin();
-        $begin->setTime($entity->getBeginTime()->format('H'), $entity->getBeginTime()->format('i'));
         for (; $day <= $numberOfDays; $day++, $begin->modify('+1 day')) {
             if ($entity->getDay($day) && $this->timesheetRepository->hasRecordForTime(
-                $this->createTimesheet($entity, $begin, $entity->getDurationPerDay() % $this->secondsInADay))) {
+                $this->createTimesheet($entity, $begin))) {
                 return $begin->format('m/d/Y');
             }
         }
@@ -81,15 +51,14 @@ class PeriodInsertRepository
      * @param PeriodInsert $entity
      * @return void
      */
-    public function saveTimesheet(PeriodInsert $entity)
+    public function saveTimesheet(PeriodInsert $entity): void
     {
         $day = (int)$entity->getBegin()->format('w');
         $numberOfDays = $entity->getEnd()->diff($entity->getBegin())->format("%a") + $day;
         $begin = clone $entity->getBegin();
-        $begin->setTime($entity->getBeginTime()->format('H'), $entity->getBeginTime()->format('i'));
         for (; $day <= $numberOfDays; $day++, $begin->modify('+1 day')) {
             if ($entity->getDay($day)) {
-                $this->timesheetRepository->save($this->createTimesheet($entity, $begin, $entity->getDurationPerDay() % $this->secondsInADay));
+                $this->timesheetRepository->save($this->createTimesheet($entity, $begin));
             }
         }
     }
@@ -97,17 +66,16 @@ class PeriodInsertRepository
     /**
      * @param PeriodInsert $entity
      * @param DateTime $begin
-     * @param int $duration
      * @return Timesheet
      */
-    protected function createTimesheet(PeriodInsert $entity, DateTime $begin, int $duration): Timesheet
+    protected function createTimesheet(PeriodInsert $entity, DateTime $begin): Timesheet
     {
         $entry = new Timesheet();
         $entry->setUser($entity->getUser());
 
-        $entry->setBegin($begin);
-        $entry->setEnd((clone $begin)->modify('+' . $duration . ' seconds'));
-        $entry->setDuration($duration);
+        $entry->setBegin((clone $begin));
+        $entry->setEnd((clone $begin)->setTime($entity->getEndTime()->format('H'), $entity->getEndTime()->format('i')));
+        $entry->setDuration($entity->getDurationPerDay());
 
         $entry->setProject($entity->getProject());
         $entry->setActivity($entity->getActivity());

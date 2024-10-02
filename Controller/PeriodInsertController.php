@@ -38,6 +38,12 @@ class PeriodInsertController extends AbstractController
     #[Route(path: '', name: 'period_insert', methods: ['GET', 'POST'])]
     public function indexAction(Request $request): Response
     {
+        if ($this->service->getActiveTrackingMode()->getId() === 'punch') {
+            return $this->render('@PeriodInsert/index.html.twig', [
+                'page_setup' => $this->createPageSetup(),
+            ]);
+        }
+
         $entry = $this->service->createNewTimesheet($this->getUser(), $request);
 
         $entity = $this->repository->getTimesheet();
@@ -84,7 +90,7 @@ class PeriodInsertController extends AbstractController
         return $this->render('@PeriodInsert/index.html.twig', [
             'page_setup' => $this->createPageSetup(),
             'route_back' => 'timesheet',
-            'entity' => 'entity',
+            'entity' => $entity,
             'form' => $form->createView(),
         ]);
     }

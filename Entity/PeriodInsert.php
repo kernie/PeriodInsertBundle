@@ -122,7 +122,8 @@ class PeriodInsert
     {
         $this->beginToEnd->getBegin()->setTime($this->beginTime->format('H'), $this->beginTime->format('i'));
         $this->endTime = (clone $this->beginTime)->modify('+' . $this->duration . ' seconds');
-        $this->beginToEnd->getEnd()->setTime($this->endTime->format('H'), $this->endTime->format('i'));
+        $this->beginToEnd->getEnd()->setTime($this->beginTime->format('H'), $this->beginTime->format('i'));
+        $this->beginToEnd->getEnd()->modify('+' . $this->duration . ' seconds');
         $this->billable = $this->calculateBillable($this->billableMode);
     }
 

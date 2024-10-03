@@ -51,6 +51,7 @@ class PeriodInsertRepository
 
     /**
      * @param PeriodInsert $entity
+     * @param string $dayToInsert
      * @return bool
      */
     public function checkFutureTime(PeriodInsert $entity, string $dayToInsert): bool
@@ -170,9 +171,11 @@ class PeriodInsertRepository
 
     /**
      * @param BudgetStatisticModel $stat
+     * @param PeriodInsert $entity
      * @param int $duration
      * @param float $rate
      * @param int $validDays
+     * @param string $field
      * @return string
      */
     protected function checkBudgets(BudgetStatisticModel $stat, PeriodInsert $entity, int $duration, float $rate, int $validDays, string $field): string
@@ -220,7 +223,7 @@ class PeriodInsertRepository
     /**
      * @param string $field
      * @param int $budget
-     * @param int $rate
+     * @param int $duration
      * @return string
      */
     protected function getTimeBudgetViolationMessage(string $field, int $budget, int $duration): string

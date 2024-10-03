@@ -220,7 +220,7 @@ class PeriodInsert
     }
 
     /**
-     * @return bool $monday
+     * @return bool
      */
     public function getMonday(): bool
     {
@@ -236,7 +236,7 @@ class PeriodInsert
     }
 
     /**
-     * @return bool $tuesday
+     * @return bool
      */
     public function getTuesday(): bool
     {
@@ -252,7 +252,7 @@ class PeriodInsert
     }
 
     /**
-     * @return bool $wednesday
+     * @return bool
      */
     public function getWednesday(): bool
     {
@@ -268,7 +268,7 @@ class PeriodInsert
     }
 
     /**
-     * @return bool $thursday
+     * @return bool
      */
     public function getThursday(): bool
     {
@@ -284,7 +284,7 @@ class PeriodInsert
     }
 
     /**
-     * @return bool $friday
+     * @return bool
      */
     public function getFriday(): bool
     {
@@ -300,7 +300,7 @@ class PeriodInsert
     }
 
     /**
-     * @return bool $saturday
+     * @return bool
      */
     public function getSaturday(): bool
     {
@@ -316,7 +316,7 @@ class PeriodInsert
     }
 
     /**
-     * @return bool $sunday
+     * @return bool
      */
     public function getSunday(): bool
     {
@@ -332,7 +332,7 @@ class PeriodInsert
     }
 
     /**
-     * @return float|null $fixedRate
+     * @return float|null
      */
     public function getFixedRate(): ?float
     {
@@ -348,7 +348,7 @@ class PeriodInsert
     }
 
     /**
-     * @return float|null $hourlyRate
+     * @return float|null
      */
     public function getHourlyRate(): ?float
     {
@@ -397,7 +397,7 @@ class PeriodInsert
     }
 
     /**
-     * @return string $billableMode
+     * @return string
      */
     public function getBillableMode(): string
     {
@@ -413,7 +413,7 @@ class PeriodInsert
     }
 
     /**
-     * @return bool $exported
+     * @return bool
      */
     public function getExported(): bool
     {

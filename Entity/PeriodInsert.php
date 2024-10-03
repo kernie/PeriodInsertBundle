@@ -18,14 +18,14 @@ use Doctrine\Common\Collections\Collection;
 
 class PeriodInsert
 {
-    private ?User $user;
-    private ?DateRange $beginToEnd;
-    private ?\DateTime $beginTime;
-    private ?\DateTime $endTime;
-    private ?int $duration;
-    private ?Project $project;
-    private ?Activity $activity;
-    private ?string $description;
+    private ?User $user = null;
+    private ?DateRange $beginToEnd = null;
+    private ?\DateTime $beginTime = null;
+    private ?\DateTime $endTime = null;
+    private ?int $duration = 0;
+    private ?Project $project = null;
+    private ?Activity $activity = null;
+    private ?string $description = '';
     /**
      * @var Tag[]
      */
@@ -33,32 +33,12 @@ class PeriodInsert
     /**
      * @var bool[]
      */
-    private array $days;
-    private ?float $fixedRate;
-    private ?float $hourlyRate;
-    private bool $billable;
-    private string $billableMode;
-    private bool $exported;
-
-    /**
-     * PeriodInsert constructor.
-     */
-    public function __construct()
-    {
-        $this->user = null;
-        $this->beginToEnd = null;
-        $this->beginTime = null;
-        $this->endTime = null;
-        $this->project = null;
-        $this->activity = null;
-        $this->description = '';
-        $this->days = array_fill(0, 7, true);
-        $this->fixedRate = null;
-        $this->hourlyRate = null;
-        $this->billable = true;
-        $this->billableMode = 'auto';
-        $this->exported = false;
-    }
+    private array $days = [true, true, true, true, true, true, true];
+    private ?float $fixedRate = null;
+    private ?float $hourlyRate = null;
+    private bool $billable = true;
+    private string $billableMode = 'auto';
+    private bool $exported = false;
 
     /**
      * @return User|null
@@ -142,6 +122,7 @@ class PeriodInsert
     {
         $this->beginToEnd->getBegin()->setTime($this->beginTime->format('H'), $this->beginTime->format('i'));
         $this->endTime = (clone $this->beginTime)->modify('+' . $this->duration . ' seconds');
+        $this->beginToEnd->getEnd()->setTime($this->endTime->format('H'), $this->endTime->format('i'));
         $this->billable = $this->calculateBillable($this->billableMode);
     }
 
@@ -232,10 +213,10 @@ class PeriodInsert
     /**
      * @return bool
      */
-    public function getDay(int $day): bool
+    public function isDayValid(\DateTime $day): bool
     {
-        $day = $day % 7;
-        return $this->days[$day >= 0 ? $day : $day + 7];
+        $day = (int)$day->format('w') % 7;
+        return $this->days[$day < 0 ? $day + 7 : $day];
     }
 
     /**
@@ -410,6 +391,7 @@ class PeriodInsert
                     return false;
                 }
             }
+            return true;
         }
         return $this->billableMode === 'yes';
     }

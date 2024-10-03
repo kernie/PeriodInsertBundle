@@ -14,7 +14,6 @@ use App\Controller\AbstractController;
 use App\Entity\Timesheet;
 use App\Timesheet\TimesheetService;
 use App\Utils\PageSetup;
-use Exception;
 use KimaiPlugin\PeriodInsertBundle\Entity\PeriodInsert;
 use KimaiPlugin\PeriodInsertBundle\Form\PeriodInsertType;
 use KimaiPlugin\PeriodInsertBundle\Repository\PeriodInsertRepository;
@@ -58,31 +57,29 @@ class PeriodInsertController extends AbstractController
             $entity = $form->getData();
             $entity->setFields();
             
-            $dayToInsert = $this->findDayToInsert($entity);
-            if ($dayToInsert === '') {
-                $this->flashError('Could not find a day to insert in the given time range. Please reselect the time range or days to insert.');
+            if (($dayToInsert = $this->repository->findDayToInsert($entity)) === '') {
+                $this->flashError('Could not find a day to insert in the given time range.');
             }
-            else if (!$this->configuration->isTimesheetAllowFutureTimes() &&
-                ($dayToInsert > date('Y-m-d') || $dayToInsert === date('Y-m-d') && $this->checkTimestamp($entity))) {
+            else if ($this->repository->checkFutureTime($entity, $dayToInsert)) {
                 $this->flashError('The time range cannot be in the future.');
             }
-            else if (!$this->configuration->isTimesheetAllowZeroDuration() && $entity->getDuration() === 0) {
+            else if ($this->repository->checkZeroDuration($entity)) {
                 $this->flashError('Duration cannot be zero.');
             }
+            else if (($overlap = $this->repository->checkOverlappingTimeEntries($entity)) !== '') {
+                $this->flashError('You already have an entry on ' . $overlap . '.');
+            }
+            else if (($message = $this->repository->checkBudgetOverbooked($entity)) !== '') {
+                $this->flashError($message);
+            }
             else {
-                $overlap = $this->repository->findOverlappingTimeEntry($entity);
-                if (!$this->configuration->isTimesheetAllowOverlappingRecords() && $overlap !== '') {
-                    $this->flashError('You already have an entry on ' . $overlap . '.');
-                }
-                else {
-                    try {
-                        $this->repository->saveTimesheet($entity);
-                        $this->flashSuccess('action.update.success');
+                try {
+                    $this->repository->saveTimesheet($entity);
+                    $this->flashSuccess('action.update.success');
 
-                        return $this->redirectToRoute('period_insert');
-                    } catch (Exception $ex) {
-                        $this->flashUpdateException($ex);
-                    }
+                    return $this->redirectToRoute('period_insert');
+                } catch (\Exception $ex) {
+                    $this->flashUpdateException($ex);
                 }
             }
         }
@@ -93,37 +90,6 @@ class PeriodInsertController extends AbstractController
             'entity' => $entity,
             'form' => $form->createView(),
         ]);
-    }
-
-    /**
-     * @param PeriodInsert $entity
-     * @return bool
-     */
-    protected function checkTimestamp(PeriodInsert $entity): bool
-    {
-        $now = new \DateTime('now', $entity->getBeginTime()->getTimezone());
-
-        // allow configured default rounding time + 1 minute
-        $nowBeginTs = $now->getTimestamp() + ($this->configuration->getTimesheetDefaultRoundingBegin() * 60) + 60;
-        $nowEndTs = $now->getTimestamp() + ($this->configuration->getTimesheetDefaultRoundingEnd() * 60) + 60;
-
-        return $nowBeginTs < $entity->getBeginTime()->getTimestamp() || $nowEndTs < $entity->getEndTime()->getTimestamp();
-    }
-
-    /**
-     * @param PeriodInsert $entity
-     * @return string
-     */
-    protected function findDayToInsert(PeriodInsert $entity): string
-    {
-        $day = (int)$entity->getEnd()->format('w') - 7;
-        $numberOfDays = $entity->getEnd()->diff($entity->getBegin())->format("%r%a") + $day;
-        for ($end = clone $entity->getEnd(); $day >= $numberOfDays; $day--, $end->modify('-1 day')) {
-            if ($entity->getDay($day)) {
-                return $end->format('Y-m-d');
-            }
-        }
-        return '';
     }
 
     /**

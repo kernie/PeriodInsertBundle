@@ -10,15 +10,11 @@ namespace KimaiPlugin\PeriodInsertBundle\Repository;
 
 use App\Entity\Timesheet;
 use App\Repository\TimesheetRepository;
-use DateTime;
 use KimaiPlugin\PeriodInsertBundle\Entity\PeriodInsert;
 
 class PeriodInsertRepository
 {
-    /**
-     * @var TimesheetRepository
-     */
-    private $timesheetRepository;
+    private TimesheetRepository $timesheetRepository;
 
     /**
      * PeriodInsertRepository constructor.
@@ -68,18 +64,25 @@ class PeriodInsertRepository
      * @param DateTime $begin
      * @return Timesheet
      */
-    protected function createTimesheet(PeriodInsert $entity, DateTime $begin): Timesheet
+    protected function createTimesheet(PeriodInsert $entity, \DateTime $begin): Timesheet
     {
         $entry = new Timesheet();
         $entry->setUser($entity->getUser());
 
         $entry->setBegin((clone $begin));
-        $entry->setEnd((clone $begin)->setTime($entity->getEndTime()->format('H'), $entity->getEndTime()->format('i')));
+        $entry->setEnd((clone $begin)->modify('+' . $entity->getDuration() . ' seconds'));
         $entry->setDuration($entity->getDuration());
 
-        $entry->setProject($entity->getProject());
-        $entry->setActivity($entity->getActivity());
+        if (null !== $entity->getProject()) {
+            $entry->setProject($entity->getProject());
+        }
+
+        if (null !== $entity->getActivity()) {
+            $entry->setActivity($entity->getActivity());
+        }
+
         $entry->setDescription($entity->getDescription());
+        
         foreach ($entity->getTags() as $tag) {
             $entry->addTag($tag);
         }
@@ -91,43 +94,12 @@ class PeriodInsertRepository
         if (null !== $entity->getHourlyRate()) {
             $entry->setHourlyRate($entity->getHourlyRate());
         }
+        
+        $entry->setBillable($entity->isBillable());
+        $entry->setBillableMode($entity->getBillableMode());
+        $entry->setExported($entity->getExported());
 
-        if (null !== $entity->getBillableMode()) {
-            $entry->setBillable($this->calculateBillable($entity));
-            $entry->setBillableMode($entity->getBillableMode());
-        }
-
-        if (null !== $entity->getExported()) {
-            $entry->setExported($entity->getExported());
-        }
         return $entry;
-    }
-
-    /**
-     * @param PeriodInsert $entity
-     * @return bool
-     */
-    protected function calculateBillable(PeriodInsert $entity): bool
-    {
-        if ($entity->getBillableMode() === 'auto') {
-            $activity = $entity->getActivity();
-            if ($activity !== null && !$activity->isBillable()) {
-                return false;
-            }
-
-            $project = $entity->getProject();
-            if ($project !== null) {
-                if (!$project->isBillable()) {
-                    return false;
-                }
-
-                $customer = $project->getCustomer();
-                if ($customer !== null && !$customer->isBillable()) {
-                    return false;
-                }
-            }
-        }
-        return $entity->getBillableMode() === 'yes';
     }
 
     /**

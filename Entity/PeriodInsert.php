@@ -9,372 +9,439 @@
 
 namespace KimaiPlugin\PeriodInsertBundle\Entity;
 
+use App\Entity\Activity;
+use App\Entity\Project;
+use App\Entity\Tag;
+use App\Entity\User;
+use App\Form\Model\DateRange;
+use Doctrine\Common\Collections\Collection;
+
 class PeriodInsert
 {
-
-    private $user;
-    private $beginToEnd;
-    private $beginTime;
-    private $endTime;
-    private $duration;
-    private $project;
-    private $activity;
-    private $description;
-    private $tags;
-    private $days;
-    private $fixedRate;
-    private $hourlyRate;
-    private $billableMode;
-    private $exported;
+    private ?User $user;
+    private ?DateRange $beginToEnd;
+    private ?\DateTime $beginTime;
+    private ?\DateTime $endTime;
+    private ?int $duration;
+    private ?Project $project;
+    private ?Activity $activity;
+    private ?string $description;
+    /**
+     * @var Tag[]
+     */
+    private Collection $tags;
+    /**
+     * @var bool[]
+     */
+    private array $days;
+    private ?float $fixedRate;
+    private ?float $hourlyRate;
+    private bool $billable;
+    private string $billableMode;
+    private bool $exported;
 
     /**
-     * PeriodInsertRepository constructor.
+     * PeriodInsert constructor.
      */
     public function __construct()
     {
+        $this->user = null;
+        $this->beginToEnd = null;
+        $this->beginTime = null;
+        $this->endTime = null;
+        $this->project = null;
+        $this->activity = null;
+        $this->description = '';
         $this->days = array_fill(0, 7, true);
+        $this->fixedRate = null;
+        $this->hourlyRate = null;
+        $this->billable = true;
+        $this->billableMode = 'auto';
+        $this->exported = false;
     }
 
     /**
-     * @return mixed
+     * @return User|null
      */
-    public function getUser()
+    public function getUser(): ?User
     {
         return $this->user;
     }
 
     /**
-     * @param mixed $user
+     * @param User|null $user
      */
-    public function setUser($user): void
+    public function setUser(?User $user): void
     {
         $this->user = $user;
     }
 
     /**
-     * @return mixed
+     * @return DateRange|null
      */
-    public function getBeginToEnd()
+    public function getBeginToEnd(): ?DateRange
     {
         return $this->beginToEnd;
     }
 
     /**
-     * @param mixed $beginToEnd
+     * @param DateRange|null $begintoEnd
      */
-    public function setBeginToEnd($beginToEnd): void
+    public function setBeginToEnd(?DateRange $beginToEnd): void
     {
         $this->beginToEnd = $beginToEnd;
     }
 
     /**
-     * @return mixed
+     * @return DateTime|null
      */
-    public function getBegin()
+    public function getBegin(): ?\DateTime
     {
-        return $this->beginToEnd->getBegin();
+        if ($this->beginToEnd !== null) {
+            return $this->beginToEnd->getBegin();
+        }
+        return null;
     }
 
     /**
-     * @return mixed
+     * @return DateTime|null
      */
-    public function getEnd()
+    public function getEnd(): ?\DateTime
     {
-        return $this->beginToEnd->getEnd();
+        if ($this->beginToEnd !== null) {
+            return $this->beginToEnd->getEnd();
+        }
+        return null;
     }
 
     /**
-     * @return mixed
+     * @return DateTime|null
      */
-    public function getBeginTime()
+    public function getBeginTime(): ?\DateTime
     {
         return $this->beginTime;
     }
 
     /**
-     * @param mixed $beginTime
+     * @param DateTime|null $beginTime
      */
-    public function setBeginTime($beginTime): void
+    public function setBeginTime(?\DateTime $beginTime): void
     {
         $this->beginTime = $beginTime;
     }
 
     /**
-     * @return mixed
+     * @return DateTime|null
      */
-    public function getEndTime()
+    public function getEndTime(): ?\DateTime
     {
         return $this->endTime;
     }
 
-    public function setTimes(): void
+    public function setFields(): void
     {
         $this->beginToEnd->getBegin()->setTime($this->beginTime->format('H'), $this->beginTime->format('i'));
         $this->endTime = (clone $this->beginTime)->modify('+' . $this->duration . ' seconds');
+        $this->billable = $this->calculateBillable($this->billableMode);
     }
 
     /**
-     * @return mixed
+     * @return int|null
      */
-    public function getDuration()
+    public function getDuration(): ?int
     {
         return $this->duration;
     }
 
     /**
-     * @param mixed $duration
+     * @param int|null $duration
      */
-    public function setDuration($duration)
+    public function setDuration(?int $duration)
     {
-        $secondsInADay = 24*60*60;
-        $this->duration = $duration % $secondsInADay;
+        if ($duration !== null) {
+            $secondsInADay = 24*60*60;
+            $duration = $duration % $secondsInADay;
+        }
+        $this->duration = $duration;
     }
     
     /**
-     * @return mixed
+     * @return Project|null
      */
-    public function getProject()
+    public function getProject(): ?Project
     {
         return $this->project;
     }
 
     /**
-     * @param mixed $project
+     * @param Project|null $project
      */
-    public function setProject($project): void
+    public function setProject(?Project $project): void
     {
         $this->project = $project;
     }
 
     /**
-     * @return mixed
+     * @return Activity|null
      */
-    public function getActivity()
+    public function getActivity(): ?Activity
     {
         return $this->activity;
     }
 
     /**
-     * @param mixed $activity
+     * @param Activity|null $activity
      */
-    public function setActivity($activity): void
+    public function setActivity(?Activity $activity): void
     {
         $this->activity = $activity;
     }
 
     /**
-     * @return mixed
+     * @return string|null
      */
-    public function getDescription()
+    public function getDescription(): ?string
     {
         return $this->description;
     }
 
     /**
-     * @param mixed $description
+     * @param string|null $description
      */
-    public function setDescription($description): void
+    public function setDescription(?string $description): void
     {
         $this->description = $description;
     }
 
     /**
-     * @return mixed
+     * @return Collection<Tag>
      */
-    public function getTags()
+    public function getTags(): Collection
     {
         return $this->tags;
     }
 
     /**
-     * @param mixed $tags
+     * @param Collection<Tag> $tags
      */
-    public function setTags($tags): void
+    public function setTags(Collection $tags): void
     {
         $this->tags = $tags;
     }
 
     /**
-     * @return mixed
+     * @return bool
      */
-    public function getDay(int $day)
+    public function getDay(int $day): bool
     {
         $day = $day % 7;
         return $this->days[$day >= 0 ? $day : $day + 7];
     }
 
     /**
-     * @return mixed $monday
+     * @return bool $monday
      */
-    public function getMonday()
+    public function getMonday(): bool
     {
         return $this->days[1];
     }
 
     /**
-     * @param mixed $monday
+     * @param bool $monday
      */
-    public function setMonday($monday): void
+    public function setMonday(bool $monday): void
     {
         $this->days[1] = $monday;
     }
 
     /**
-     * @return mixed $tuesday
+     * @return bool $tuesday
      */
-    public function getTuesday()
+    public function getTuesday(): bool
     {
         return $this->days[2];
     }
 
     /**
-     * @param mixed $tuesday
+     * @param bool $tuesday
      */
-    public function setTuesday($tuesday): void
+    public function setTuesday(bool $tuesday): void
     {
         $this->days[2] = $tuesday;
     }
 
     /**
-     * @return mixed $wednesday
+     * @return bool $wednesday
      */
-    public function getWednesday()
+    public function getWednesday(): bool
     {
         return $this->days[3];
     }
 
     /**
-     * @param mixed $wednesday
+     * @param bool $wednesday
      */
-    public function setWednesday($wednesday): void
+    public function setWednesday(bool $wednesday): void
     {
         $this->days[3] = $wednesday;
     }
 
     /**
-     * @return mixed $thursday
+     * @return bool $thursday
      */
-    public function getThursday()
+    public function getThursday(): bool
     {
         return $this->days[4];
     }
 
     /**
-     * @param mixed $thursday
+     * @param bool $thursday
      */
-    public function setThursday($thursday): void
+    public function setThursday(bool $thursday): void
     {
         $this->days[4] = $thursday;
     }
 
     /**
-     * @return mixed $friday
+     * @return bool $friday
      */
-    public function getFriday()
+    public function getFriday(): bool
     {
         return $this->days[5];
     }
 
     /**
-     * @param mixed $friday
+     * @param bool $friday
      */
-    public function setFriday($friday): void
+    public function setFriday(bool $friday): void
     {
         $this->days[5] = $friday;
     }
 
     /**
-     * @return mixed $saturday
+     * @return bool $saturday
      */
-    public function getSaturday()
+    public function getSaturday(): bool
     {
         return $this->days[6];
     }
 
     /**
-     * @param mixed $saturday
+     * @param bool $saturday
      */
-    public function setSaturday($saturday): void
+    public function setSaturday(bool $saturday): void
     {
         $this->days[6] = $saturday;
     }
 
     /**
-     * @return mixed $sunday
+     * @return bool $sunday
      */
-    public function getSunday()
+    public function getSunday(): bool
     {
         return $this->days[0];
     }
 
     /**
-     * @param mixed $sunday
+     * @param bool $sunday
      */
-    public function setSunday($sunday): void
+    public function setSunday(bool $sunday): void
     {
         $this->days[0] = $sunday;
     }
 
     /**
-     * @return mixed $fixedRate
+     * @return float|null $fixedRate
      */
-    public function getFixedRate()
+    public function getFixedRate(): ?float
     {
         return $this->fixedRate;
     }
 
     /**
-     * @param mixed $fixedRate
+     * @param float|null $fixedRate
      */
-    public function setFixedRate($fixedRate): void
+    public function setFixedRate(?float $fixedRate): void
     {
         $this->fixedRate = $fixedRate;
     }
 
     /**
-     * @return mixed $hourlyRate
+     * @return float|null $hourlyRate
      */
-    public function getHourlyRate()
+    public function getHourlyRate(): ?float
     {
         return $this->hourlyRate;
     }
 
     /**
-     * @param mixed $hourlyRate
+     * @param float|null $hourlyRate
      */
-    public function setHourlyRate($hourlyRate): void
+    public function setHourlyRate(?float $hourlyRate): void
     {
         $this->hourlyRate = $hourlyRate;
     }
 
     /**
-     * @return mixed $billableMode
+     * @return bool
      */
-    public function getBillableMode()
+    public function isBillable(): bool
+    {
+        return $this->billable;
+    }
+
+    /**
+     * @return bool
+     */
+    public function calculateBillable(): bool
+    {
+        if ($this->billableMode === 'auto') {
+            if ($this->activity !== null && !$this->activity->isBillable()) {
+                return false;
+            }
+            
+            if ($this->project !== null) {
+                if (!$this->project->isBillable()) {
+                    return false;
+                }
+                
+                $customer = $this->project->getCustomer();
+                if ($customer !== null && !$customer->isBillable()) {
+                    return false;
+                }
+            }
+        }
+        return $this->billableMode === 'yes';
+    }
+
+    /**
+     * @return string $billableMode
+     */
+    public function getBillableMode(): string
     {
         return $this->billableMode;
     }
 
     /**
-     * @param mixed $billableMode
+     * @param string $billableMode
      */
-    public function setBillableMode($billableMode): void
+    public function setBillableMode(string $billableMode): void
     {
         $this->billableMode = $billableMode;
     }
 
     /**
-     * @return mixed $exported
+     * @return bool $exported
      */
-    public function getExported()
+    public function getExported(): bool
     {
         return $this->exported;
     }
 
     /**
-     * @param mixed $exported
+     * @param bool $exported
      */
-    public function setExported($exported): void
+    public function setExported(bool $exported): void
     {
         $this->exported = $exported;
     }

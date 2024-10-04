@@ -22,7 +22,7 @@ class PeriodInsert
     private ?DateRange $beginToEnd = null;
     private ?\DateTime $beginTime = null;
     private ?\DateTime $endTime = null;
-    private ?int $duration = 0;
+    private ?int $duration = null;
     private ?Project $project = null;
     private ?Activity $activity = null;
     private ?string $description = '';

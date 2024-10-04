@@ -47,7 +47,6 @@ class PeriodInsertController extends AbstractController
 
         $entity = $this->repository->getTimesheet();
         $entity->setUser($this->getUser());
-        $entity->setBeginTime($entry->getBegin());
 
         $form = $this->getInsertForm($entity, $entry);
         $form->handleRequest($request);

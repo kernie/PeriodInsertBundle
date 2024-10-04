@@ -107,7 +107,7 @@ class PeriodInsertRepository
      */
     public function checkBudgetOverbooked(PeriodInsert $entity): string
     {   
-        if ($this->configuration->isTimesheetAllowZeroDuration()) {
+        if ($this->configuration->isTimesheetAllowOverbookingBudget()) {
             return '';
         }
 

@@ -32,9 +32,11 @@ By default, it is assigned to each user with the role `ROLE_SUPER_ADMIN`.
 
 Read how to assign these permissions to your user roles in the [permission documentation](https://www.kimai.org/documentation/permissions.html).
 
-## Screenshot
+## Screenshots
 
-![Alt text](/screenshot.png?raw=true "Period Insert plugin screenshot")
+![Alt text](/screenshot0.png?raw=true "Period Insert plugin in Default timetracking mode")
+![Alt text](/screenshot1.png?raw=true "Period Insert plugin in Duration timetracking mode")
+![Alt text](/screenshot2.png?raw=true "Period Insert plugin in Time-clock timetracking mode")
 
 ## Acknowledgements
 

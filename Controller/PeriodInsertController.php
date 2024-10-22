@@ -54,6 +54,9 @@ class PeriodInsertController extends AbstractController
         if ($form->isSubmitted() && $form->isValid()) {
             /** @var PeriodInsert $entity */
             $entity = $form->getData();
+            if ($this->service->getActiveTrackingMode()->getId() === 'duration_fixed_begin') {
+                $entity->setBeginTime($entry->getBegin());
+            }
             $entity->setFields();
             
             if (($dayToInsert = $this->repository->findDayToInsert($entity)) === '') {

@@ -4,7 +4,7 @@ A plugin for Kimai that generates entries for a given time period.
 
 ## Installation
 
-This plugin is compatible with Kimai version 2.1.0 or higher.
+This plugin is compatible with Kimai version 2.26.0 or higher. Releases 1.0-1.2 are compatible with Kimai version 2.1.0 or higher.
 
 Download and extract the bundle in `var/plugins/` (see [plugin docs](https://www.kimai.org/documentation/plugin-management.html)).
 
@@ -35,7 +35,7 @@ Read how to assign these permissions to your user roles in the [permission docum
 ## Screenshots
 
 ![Alt text](/screenshot0.png?raw=true "Period Insert plugin in Default timetracking mode")
-![Alt text](/screenshot1.png?raw=true "Period Insert plugin in Duration timetracking mode")
+![Alt text](/screenshot1.png?raw=true "Period Insert plugin in Duration and Time-clock timetracking modes")
 
 ## Acknowledgements
 

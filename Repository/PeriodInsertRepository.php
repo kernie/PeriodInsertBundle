@@ -19,6 +19,7 @@ use App\Repository\TimesheetRepository;
 use App\Timesheet\RateServiceInterface;
 use App\Utils\Duration;
 use App\Utils\LocaleFormatter;
+use App\WorkingTime\WorkingTimeService;
 use KimaiPlugin\PeriodInsertBundle\Entity\PeriodInsert;
 use Symfony\Component\Security\Core\Authorization\AuthorizationCheckerInterface;
 
@@ -31,7 +32,8 @@ class PeriodInsertRepository
         private readonly ActivityStatisticService $activityStatisticService,
         private readonly RateServiceInterface $rateService,
         private readonly AuthorizationCheckerInterface $security,
-        private readonly LocaleService $localeService
+        private readonly LocaleService $localeService,
+        private readonly WorkingTimeService $workService
     ) {
     }
 
@@ -250,7 +252,7 @@ class PeriodInsertRepository
     public function saveTimesheet(PeriodInsert $entity): void
     {
         for ($begin = clone $entity->getBegin(); $begin <= $entity->getEnd(); $begin->modify('+1 day')) {
-            if ($entity->isDayValid($begin)) {
+            if ($entity->isDayValid($begin) && $this->workService->getContractMode($entity->getUser())->getCalculator($entity->getUser())->isWorkDay($begin)) {
                 $this->timesheetRepository->save($this->createTimesheet($entity, $begin));
             }
         }

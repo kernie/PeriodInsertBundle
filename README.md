@@ -36,7 +36,6 @@ Read how to assign these permissions to your user roles in the [permission docum
 
 ![Alt text](/screenshot0.png?raw=true "Period Insert plugin in Default timetracking mode")
 ![Alt text](/screenshot1.png?raw=true "Period Insert plugin in Duration timetracking mode")
-![Alt text](/screenshot2.png?raw=true "Period Insert plugin in Time-clock timetracking mode")
 
 ## Acknowledgements
 

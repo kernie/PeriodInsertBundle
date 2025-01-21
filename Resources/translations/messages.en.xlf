@@ -4,7 +4,7 @@
         <body>
             <trans-unit id="periodinsert.title">
                 <source>periodinsert.title</source>
-                <target>Period Insert Plugin</target>
+                <target>Period Insert</target>
             </trans-unit>
             <trans-unit id="periodinsert.subtitle">
                 <source>periodinsert.subtitle</source>

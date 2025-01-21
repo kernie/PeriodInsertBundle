@@ -112,8 +112,14 @@ class PeriodInsert
         return $this->endTime;
     }
 
-    public function setFields(): void
+    /**
+     * @param DateTime $begin
+     */
+    public function setFields(\DateTime $begin): void
     {
+        if ($this->beginTime === null) {
+            $this->beginTime = $begin;
+        }
         $this->dateRange->getBegin()->setTime($this->beginTime->format('H'), $this->beginTime->format('i'));
         $this->endTime = (clone $this->beginTime)->modify('+' . $this->duration . ' seconds');
         $this->dateRange->getEnd()->setTime($this->beginTime->format('H'), $this->beginTime->format('i'));

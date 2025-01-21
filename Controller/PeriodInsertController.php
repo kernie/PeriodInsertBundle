@@ -29,7 +29,7 @@ class PeriodInsertController extends AbstractController
 {
     public function __construct(
         protected PeriodInsertRepository $repository,
-        protected TimesheetService $service,
+        protected TimesheetService $timesheetService,
         protected SystemConfiguration $configuration
     ) {
     }
@@ -37,7 +37,7 @@ class PeriodInsertController extends AbstractController
     #[Route(path: '', name: 'period_insert', methods: ['GET', 'POST'])]
     public function indexAction(Request $request): Response
     {
-        $timesheet = $this->service->createNewTimesheet($this->getUser(), $request);
+        $timesheet = $this->timesheetService->createNewTimesheet($this->getUser(), $request);
 
         $periodInsert = new PeriodInsert();
         $periodInsert->setUser($this->getUser());
@@ -48,10 +48,7 @@ class PeriodInsertController extends AbstractController
         if ($form->isSubmitted() && $form->isValid()) {
             /** @var PeriodInsert $periodInsert */
             $periodInsert = $form->getData();
-            if ($this->service->getActiveTrackingMode()->getId() === 'duration_fixed_begin') {
-                $periodInsert->setBeginTime($timesheet->getBegin());
-            }
-            $periodInsert->setFields();
+            $periodInsert->setFields($timesheet->getBegin());
             
             if (($dayToInsert = $this->repository->findDayToInsert($periodInsert)) === '') {
                 $this->flashError('Could not find a day to insert in the given time range.');
@@ -101,7 +98,7 @@ class PeriodInsertController extends AbstractController
             'include_rate' => $this->isGranted('edit_rate', $timesheet),
             'include_billable' => $this->isGranted('edit_billable', $timesheet),
             'include_exported' => $this->isGranted('edit_export', $timesheet),
-            'allow_begin_datetime' => $this->service->getActiveTrackingMode()->canEditBegin(),
+            'allow_begin_datetime' => $this->timesheetService->getActiveTrackingMode()->canEditBegin(),
             'duration_minutes' => $this->configuration->getTimesheetIncrementDuration(),
             'timezone' => $this->getDateTimeFactory()->getTimezone()->getName(),
             'customer' => true,

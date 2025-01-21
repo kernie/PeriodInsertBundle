@@ -94,7 +94,7 @@ class PeriodInsertController extends AbstractController
     {
         return $this->createForm(PeriodInsertType::class, $periodInsert, [
             'action' => $this->generateUrl('period_insert'),
-            'include_user' => $this->isGranted('ROLE_SUPER_ADMIN'),
+            'include_user' => $this->isGranted('create_other_timesheet'),
             'include_rate' => $this->isGranted('edit_rate', $timesheet),
             'include_billable' => $this->isGranted('edit_billable', $timesheet),
             'include_exported' => $this->isGranted('edit_export', $timesheet),

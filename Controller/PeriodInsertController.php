@@ -37,40 +37,40 @@ class PeriodInsertController extends AbstractController
     #[Route(path: '', name: 'period_insert', methods: ['GET', 'POST'])]
     public function indexAction(Request $request): Response
     {
-        $entry = $this->service->createNewTimesheet($this->getUser(), $request);
+        $timesheet = $this->service->createNewTimesheet($this->getUser(), $request);
 
-        $entity = $this->repository->getTimesheet();
-        $entity->setUser($this->getUser());
+        $periodInsert = new PeriodInsert();
+        $periodInsert->setUser($this->getUser());
 
-        $form = $this->getInsertForm($entity, $entry);
+        $form = $this->getInsertForm($periodInsert, $timesheet);
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
-            /** @var PeriodInsert $entity */
-            $entity = $form->getData();
+            /** @var PeriodInsert $periodInsert */
+            $periodInsert = $form->getData();
             if ($this->service->getActiveTrackingMode()->getId() === 'duration_fixed_begin') {
-                $entity->setBeginTime($entry->getBegin());
+                $periodInsert->setBeginTime($timesheet->getBegin());
             }
-            $entity->setFields();
+            $periodInsert->setFields();
             
-            if (($dayToInsert = $this->repository->findDayToInsert($entity)) === '') {
+            if (($dayToInsert = $this->repository->findDayToInsert($periodInsert)) === '') {
                 $this->flashError('Could not find a day to insert in the given time range.');
             }
-            else if ($this->repository->checkFutureTime($entity, $dayToInsert)) {
+            else if ($this->repository->checkFutureTime($periodInsert, $dayToInsert)) {
                 $this->flashError('The time range cannot be in the future.');
             }
-            else if ($this->repository->checkZeroDuration($entity)) {
+            else if ($this->repository->checkZeroDuration($periodInsert)) {
                 $this->flashError('Duration cannot be zero.');
             }
-            else if (($overlap = $this->repository->checkOverlappingTimeEntries($entity)) !== '') {
+            else if (($overlap = $this->repository->checkOverlappingTimeEntries($periodInsert)) !== '') {
                 $this->flashError('You already have an entry on ' . $overlap . '.');
             }
-            else if (($message = $this->repository->checkBudgetOverbooked($entity)) !== '') {
+            else if (($message = $this->repository->checkBudgetOverbooked($periodInsert)) !== '') {
                 $this->flashError($message);
             }
             else {
                 try {
-                    $this->repository->saveTimesheet($entity);
+                    $this->repository->saveTimesheet($periodInsert);
                     $this->flashSuccess('action.update.success');
 
                     return $this->redirectToRoute('period_insert');
@@ -83,24 +83,24 @@ class PeriodInsertController extends AbstractController
         return $this->render('@PeriodInsert/index.html.twig', [
             'page_setup' => $this->createPageSetup(),
             'route_back' => 'timesheet',
-            'entity' => $entity,
+            'period_insert' => $periodInsert,
             'form' => $form->createView(),
         ]);
     }
 
     /**
-     * @param PeriodInsert $entity
-     * @param Timesheet $entry
+     * @param PeriodInsert $periodInsert
+     * @param Timesheet $timesheet
      * @return FormInterface
      */
-    protected function getInsertForm(PeriodInsert $entity, Timesheet $entry): FormInterface
+    protected function getInsertForm(PeriodInsert $periodInsert, Timesheet $timesheet): FormInterface
     {
-        return $this->createForm(PeriodInsertType::class, $entity, [
+        return $this->createForm(PeriodInsertType::class, $periodInsert, [
             'action' => $this->generateUrl('period_insert'),
             'include_user' => $this->isGranted('ROLE_SUPER_ADMIN'),
-            'include_rate' => $this->isGranted('edit_rate', $entry),
-            'include_billable' => $this->isGranted('edit_billable', $entry),
-            'include_exported' => $this->isGranted('edit_export', $entry),
+            'include_rate' => $this->isGranted('edit_rate', $timesheet),
+            'include_billable' => $this->isGranted('edit_billable', $timesheet),
+            'include_exported' => $this->isGranted('edit_export', $timesheet),
             'allow_begin_datetime' => $this->service->getActiveTrackingMode()->canEditBegin(),
             'duration_minutes' => $this->configuration->getTimesheetIncrementDuration(),
             'timezone' => $this->getDateTimeFactory()->getTimezone()->getName(),

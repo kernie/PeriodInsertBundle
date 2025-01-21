@@ -40,13 +40,13 @@ class PeriodInsertRepository
     }
 
     /**
-     * @param PeriodInsert $entity
+     * @param PeriodInsert $periodInsert
      * @return string
      */
-    public function findDayToInsert(PeriodInsert $entity): string
+    public function findDayToInsert(PeriodInsert $periodInsert): string
     {
-        for ($end = clone $entity->getEnd(); $end >= $entity->getBegin(); $end->modify('-1 day')) {
-            if ($entity->isDayValid($end)) {
+        for ($end = clone $periodInsert->getEnd(); $end >= $periodInsert->getBegin(); $end->modify('-1 day')) {
+            if ($periodInsert->isDayValid($end)) {
                 return $end->format('Y-m-d');
             }
         }
@@ -54,11 +54,11 @@ class PeriodInsertRepository
     }
 
     /**
-     * @param PeriodInsert $entity
+     * @param PeriodInsert $periodInsert
      * @param string $dayToInsert
      * @return bool
      */
-    public function checkFutureTime(PeriodInsert $entity, string $dayToInsert): bool
+    public function checkFutureTime(PeriodInsert $periodInsert, string $dayToInsert): bool
     {
         if ($this->configuration->isTimesheetAllowFutureTimes()) {
             return false;
@@ -68,36 +68,36 @@ class PeriodInsertRepository
             return $dayToInsert > date('Y-m-d');
         }
 
-        $now = new \DateTime('now', $entity->getBeginTime()->getTimezone());
+        $now = new \DateTime('now', $periodInsert->getBeginTime()->getTimezone());
 
         // allow configured default rounding time + 1 minute
         $nowBeginTs = $now->getTimestamp() + ($this->configuration->getTimesheetDefaultRoundingBegin() * 60) + 60;
         $nowEndTs = $now->getTimestamp() + ($this->configuration->getTimesheetDefaultRoundingEnd() * 60) + 60;
 
-        return $nowBeginTs < $entity->getBeginTime()->getTimestamp() || $nowEndTs < $entity->getEndTime()->getTimestamp();
+        return $nowBeginTs < $periodInsert->getBeginTime()->getTimestamp() || $nowEndTs < $periodInsert->getEndTime()->getTimestamp();
     }
 
     /**
-     * @param PeriodInsert $entity
+     * @param PeriodInsert $periodInsert
      * @return bool
      */
-    public function checkZeroDuration(PeriodInsert $entity): bool
+    public function checkZeroDuration(PeriodInsert $periodInsert): bool
     {
         if ($this->configuration->isTimesheetAllowZeroDuration()) {
             return false;
         }
-        return $entity->getDuration() === 0;
+        return $periodInsert->getDuration() === 0;
     }
 
     /**
-     * @param PeriodInsert $entity
+     * @param PeriodInsert $periodInsert
      * @return string
      */
-    public function checkOverlappingTimeEntries(PeriodInsert $entity): string
+    public function checkOverlappingTimeEntries(PeriodInsert $periodInsert): string
     {   
         if (!$this->configuration->isTimesheetAllowOverlappingRecords()) {
-            for ($begin = clone $entity->getBegin(); $begin <= $entity->getEnd(); $begin->modify('+1 day')) {
-                if ($entity->isDayValid($begin) && $this->timesheetRepository->hasRecordForTime($this->createTimesheet($entity, $begin))) {
+            for ($begin = clone $periodInsert->getBegin(); $begin <= $periodInsert->getEnd(); $begin->modify('+1 day')) {
+                if ($periodInsert->isDayValid($begin) && $this->timesheetRepository->hasRecordForTime($this->createTimesheet($periodInsert, $begin))) {
                     return $begin->format('m/d/Y');
                 }
             }
@@ -106,56 +106,56 @@ class PeriodInsertRepository
     }
 
     /**
-     * @param PeriodInsert $entity
+     * @param PeriodInsert $periodInsert
      * @return string
      */
-    public function checkBudgetOverbooked(PeriodInsert $entity): string
+    public function checkBudgetOverbooked(PeriodInsert $periodInsert): string
     {   
         if ($this->configuration->isTimesheetAllowOverbookingBudget()) {
             return '';
         }
 
-        if (!$entity->isBillable()) {
+        if (!$periodInsert->isBillable()) {
             return '';
         }
         
-        if ($entity->getProject() === null) {
+        if ($periodInsert->getProject() === null) {
             return '';
         }
 
         $totalValidDays = 0;
         $validDaysPerMonth = [];
-        for ($begin = clone $entity->getBegin(); $begin <= $entity->getEnd(); $begin->modify('+1 day')) {
-            if ($entity->isDayValid($begin)) {
+        for ($begin = clone $periodInsert->getBegin(); $begin <= $periodInsert->getEnd(); $begin->modify('+1 day')) {
+            if ($periodInsert->isDayValid($begin)) {
                 $totalValidDays++;
                 $validDaysPerMonth[$begin->format('Y-m')] = ($validDaysPerMonth[$begin->format('Y-m')] ?? 0) + 1;
             }
         }
 
-        $recordDate = clone $entity->getBegin();
-        $duration = $entity->getDuration();
+        $recordDate = clone $periodInsert->getBegin();
+        $duration = $periodInsert->getDuration();
 
-        $timeRate = $this->rateService->calculate($this->createTimesheet($entity, $recordDate));
+        $timeRate = $this->rateService->calculate($this->createTimesheet($periodInsert, $recordDate));
         $rate = $timeRate->getRate();
 
         $now = new \DateTime('now', $recordDate->getTimezone());
         
         foreach ($validDaysPerMonth as $validDaysInMonth) {
-            if (null !== ($activity = $entity->getActivity()) && $activity->hasBudgets()) {
+            if (null !== ($activity = $periodInsert->getActivity()) && $activity->hasBudgets()) {
                 $dateTime = $activity->isMonthlyBudget() ? $recordDate : $now;
                 $validDays = $activity->isMonthlyBudget() ? $validDaysInMonth : $totalValidDays;
                 $stat = $this->activityStatisticService->getBudgetStatisticModel($activity, $dateTime);
-                if (($message = $this->checkBudgets($stat, $entity, $duration, $rate, $validDays, 'activity')) !== '') {
+                if (($message = $this->checkBudgets($stat, $periodInsert, $duration, $rate, $validDays, 'activity')) !== '') {
                     return $message;
                 }
             }
     
-            if (null !== ($project = $entity->getProject())) {
+            if (null !== ($project = $periodInsert->getProject())) {
                 if ($project->hasBudgets()) {
                     $dateTime = $project->isMonthlyBudget() ? $recordDate : $now;
                     $validDays = $project->isMonthlyBudget() ? $validDaysInMonth : $totalValidDays;
                     $stat = $this->projectStatisticService->getBudgetStatisticModel($project, $dateTime);
-                    if (($message = $this->checkBudgets($stat, $entity, $duration, $rate, $validDays, 'project')) !== '') {
+                    if (($message = $this->checkBudgets($stat, $periodInsert, $duration, $rate, $validDays, 'project')) !== '') {
                         return $message;
                     }
                 }
@@ -163,7 +163,7 @@ class PeriodInsertRepository
                     $dateTime = $customer->isMonthlyBudget() ? $recordDate : $now;
                     $validDays = $customer->isMonthlyBudget() ? $validDaysInMonth : $totalValidDays;
                     $stat = $this->customerStatisticService->getBudgetStatisticModel($customer, $dateTime);
-                    if (($message = $this->checkBudgets($stat, $entity, $duration, $rate, $validDays, 'customer')) !== '') {
+                    if (($message = $this->checkBudgets($stat, $periodInsert, $duration, $rate, $validDays, 'customer')) !== '') {
                         return $message;
                     }
                 }
@@ -175,19 +175,19 @@ class PeriodInsertRepository
 
     /**
      * @param BudgetStatisticModel $stat
-     * @param PeriodInsert $entity
+     * @param PeriodInsert $periodInsert
      * @param int $duration
      * @param float $rate
      * @param int $validDays
      * @param string $field
      * @return string
      */
-    protected function checkBudgets(BudgetStatisticModel $stat, PeriodInsert $entity, int $duration, float $rate, int $validDays, string $field): string
+    protected function checkBudgets(BudgetStatisticModel $stat, PeriodInsert $periodInsert, int $duration, float $rate, int $validDays, string $field): string
     {
         $fullRate = $stat->getBudgetSpent() + $rate * $validDays;
 
         if ($stat->hasBudget() && $fullRate > $stat->getBudget()) {
-            return $this->getBudgetViolationMessage($entity, $field, $stat->getBudget(), $stat->getBudgetSpent());
+            return $this->getBudgetViolationMessage($periodInsert, $field, $stat->getBudget(), $stat->getBudgetSpent());
         }
 
         $fullDuration = $stat->getTimeBudgetSpent() + $duration * $validDays;
@@ -200,20 +200,20 @@ class PeriodInsertRepository
     }
 
     /**
-     * @param PeriodInsert $entity
+     * @param PeriodInsert $periodInsert
      * @param string $field
      * @param float $budget
      * @param float $rate
      * @return string
      */
-    protected function getBudgetViolationMessage(PeriodInsert $entity, string $field, float $budget, float $rate): string
+    protected function getBudgetViolationMessage(PeriodInsert $periodInsert, string $field, float $budget, float $rate): string
     {
         if (!$this->security->isGranted('budget_money', $field)) {
             return 'Sorry, the budget is used up.';
         }
         // using the locale of the assigned user is not the best solution, but allows to be independent of the request stack
-        $helper = new LocaleFormatter($this->localeService, $entity->getUser()?->getLocale() ?? 'en');
-        $currency = $entity->getProject()->getCustomer()->getCurrency();
+        $helper = new LocaleFormatter($this->localeService, $periodInsert->getUser()?->getLocale() ?? 'en');
+        $currency = $periodInsert->getProject()->getCustomer()->getCurrency();
 
         $free = $budget - $rate;
         $free = max($free, 0);
@@ -248,14 +248,14 @@ class PeriodInsertRepository
     }
 
     /**
-     * @param PeriodInsert $entity
+     * @param PeriodInsert $periodInsert
      * @return string[]
      */
-    public function findHolidays(PeriodInsert $entity): array
+    public function findHolidays(PeriodInsert $periodInsert): array
     {
         $holidays = [];
-        for ($begin = clone $entity->getBegin(); $begin <= $entity->getEnd(); $begin->modify('first day of next month')) {
-            $month = $this->workService->getMonth($entity->getUser(), $begin, (clone $begin)->modify('last day of this month'));
+        for ($begin = clone $periodInsert->getBegin(); $begin <= $periodInsert->getEnd(); $begin->modify('first day of next month')) {
+            $month = $this->workService->getMonth($periodInsert->getUser(), $begin, (clone $begin)->modify('last day of this month'));
             foreach ($month->getDays() as $day) {
                 if ($day->hasAddons()) {
                     $holidays[] = $day->getDay()->format('Y-m-d');
@@ -266,68 +266,59 @@ class PeriodInsertRepository
     }
 
     /**
-     * @param PeriodInsert $entity
+     * @param PeriodInsert $periodInsert
      * @return void
      */
-    public function saveTimesheet(PeriodInsert $entity): void
+    public function saveTimesheet(PeriodInsert $periodInsert): void
     {
-        $holidays = $this->findHolidays($entity);
-        for ($begin = clone $entity->getBegin(); $begin <= $entity->getEnd(); $begin->modify('+1 day')) {
-            if ($entity->isDayValid($begin) && $this->workService->getContractMode($entity->getUser())->getCalculator($entity->getUser())->isWorkDay($begin) && !in_array($begin->format('Y-m-d'), $holidays)) {
-                $this->timesheetService->saveNewTimesheet($this->createTimesheet($entity, $begin));
+        $holidays = $this->findHolidays($periodInsert);
+        for ($begin = clone $periodInsert->getBegin(); $begin <= $periodInsert->getEnd(); $begin->modify('+1 day')) {
+            if ($periodInsert->isDayValid($begin) && $this->workService->getContractMode($periodInsert->getUser())->getCalculator($periodInsert->getUser())->isWorkDay($begin) && !in_array($begin->format('Y-m-d'), $holidays)) {
+                $this->timesheetService->saveNewTimesheet($this->createTimesheet($periodInsert, $begin));
             }
         }
     }
 
     /**
-     * @param PeriodInsert $entity
+     * @param PeriodInsert $periodInsert
      * @param DateTime $begin
      * @return Timesheet
      */
-    protected function createTimesheet(PeriodInsert $entity, \DateTime $begin): Timesheet
+    public function createTimesheet(PeriodInsert $periodInsert, \DateTime $begin): Timesheet
     {
-        $entry = new Timesheet();
-        $entry->setUser($entity->getUser());
+        $timesheet = new Timesheet();
+        $timesheet->setUser($periodInsert->getUser());
 
-        $entry->setBegin((clone $begin));
-        $entry->setEnd((clone $begin)->modify('+' . $entity->getDuration() . ' seconds'));
-        $entry->setDuration($entity->getDuration());
+        $timesheet->setBegin((clone $begin));
+        $timesheet->setEnd((clone $begin)->modify('+' . $periodInsert->getDuration() . ' seconds'));
+        $timesheet->setDuration($periodInsert->getDuration());
 
-        if (null !== $entity->getProject()) {
-            $entry->setProject($entity->getProject());
+        if (null !== $periodInsert->getProject()) {
+            $timesheet->setProject($periodInsert->getProject());
         }
 
-        if (null !== $entity->getActivity()) {
-            $entry->setActivity($entity->getActivity());
+        if (null !== $periodInsert->getActivity()) {
+            $timesheet->setActivity($periodInsert->getActivity());
         }
 
-        $entry->setDescription($entity->getDescription());
+        $timesheet->setDescription($periodInsert->getDescription());
         
-        foreach ($entity->getTags() as $tag) {
-            $entry->addTag($tag);
+        foreach ($periodInsert->getTags() as $tag) {
+            $timesheet->addTag($tag);
         }
 
-        if (null !== $entity->getFixedRate()) {
-            $entry->setFixedRate($entity->getFixedRate());
-        }
-        
-        if (null !== $entity->getHourlyRate()) {
-            $entry->setHourlyRate($entity->getHourlyRate());
+        if (null !== $periodInsert->getFixedRate()) {
+            $timesheet->setFixedRate($periodInsert->getFixedRate());
         }
         
-        $entry->setBillable($entity->isBillable());
-        $entry->setBillableMode($entity->getBillableMode());
-        $entry->setExported($entity->getExported());
+        if (null !== $periodInsert->getHourlyRate()) {
+            $timesheet->setHourlyRate($periodInsert->getHourlyRate());
+        }
+        
+        $timesheet->setBillable($periodInsert->isBillable());
+        $timesheet->setBillableMode($periodInsert->getBillableMode());
+        $timesheet->setExported($periodInsert->getExported());
 
-        return $entry;
-    }
-
-    /**
-     * @return PeriodInsert
-     */
-    public function getTimesheet(): PeriodInsert
-    {
-        $entity = new PeriodInsert();
-        return $entity;
+        return $timesheet;
     }
 }

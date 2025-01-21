@@ -15,7 +15,9 @@ use App\Entity\Tag;
 use App\Entity\User;
 use App\Form\Model\DateRange;
 use Doctrine\Common\Collections\Collection;
+use KimaiPlugin\PeriodInsertBundle\Validator\Constraints as Constraints;
 
+#[Constraints\PeriodInsert]
 class PeriodInsert
 {
     private ?User $user = null;

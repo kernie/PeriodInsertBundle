@@ -5,8 +5,8 @@
             {% if form.user is defined %}
                 {{ form_row(form.user, {'row_attr': {'class': 'mb-3 ' ~ form.vars.name ~ '_row_' ~ form.user.vars.name}}) }}
             {% endif %}
-            {% if form.beginToEnd is defined %}
-                {{ form_row(form.beginToEnd, {'row_attr': {'class': 'mb-3 ' ~ form.vars.name ~ '_row_' ~ form.beginToEnd.vars.name}}) }}
+            {% if form.daterange is defined %}
+                {{ form_row(form.daterange, {'row_attr': {'class': 'mb-3 ' ~ form.vars.name ~ '_row_' ~ form.daterange.vars.name}}) }}
             {% endif %}
             {% if form.begin_time is defined %}
                 {{ form_row(form.begin_time, {'row_attr': {'class': 'mb-3 ' ~ form.vars.name ~ '_row_' ~ form.begin_time.vars.name}}) }}

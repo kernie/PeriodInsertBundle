@@ -19,7 +19,7 @@ use Doctrine\Common\Collections\Collection;
 class PeriodInsert
 {
     private ?User $user = null;
-    private ?DateRange $beginToEnd = null;
+    private ?DateRange $dateRange = null;
     private ?\DateTime $beginTime = null;
     private ?\DateTime $endTime = null;
     private ?int $duration = null;
@@ -59,39 +59,33 @@ class PeriodInsert
     /**
      * @return DateRange|null
      */
-    public function getBeginToEnd(): ?DateRange
+    public function getDateRange(): ?DateRange
     {
-        return $this->beginToEnd;
+        return $this->dateRange;
     }
 
     /**
-     * @param DateRange|null $begintoEnd
+     * @param DateRange|null $dateRange
      */
-    public function setBeginToEnd(?DateRange $beginToEnd): void
+    public function setDateRange(?DateRange $dateRange): void
     {
-        $this->beginToEnd = $beginToEnd;
+        $this->dateRange = $dateRange;
     }
 
     /**
-     * @return DateTime|null
+     * @return DateTime
      */
-    public function getBegin(): ?\DateTime
+    public function getBegin(): \DateTime
     {
-        if ($this->beginToEnd !== null) {
-            return $this->beginToEnd->getBegin();
-        }
-        return null;
+        return $this->dateRange->getBegin();
     }
 
     /**
-     * @return DateTime|null
+     * @return DateTime
      */
-    public function getEnd(): ?\DateTime
+    public function getEnd(): \DateTime
     {
-        if ($this->beginToEnd !== null) {
-            return $this->beginToEnd->getEnd();
-        }
-        return null;
+        return $this->dateRange->getEnd();
     }
 
     /**
@@ -120,10 +114,10 @@ class PeriodInsert
 
     public function setFields(): void
     {
-        $this->beginToEnd->getBegin()->setTime($this->beginTime->format('H'), $this->beginTime->format('i'));
+        $this->dateRange->getBegin()->setTime($this->beginTime->format('H'), $this->beginTime->format('i'));
         $this->endTime = (clone $this->beginTime)->modify('+' . $this->duration . ' seconds');
-        $this->beginToEnd->getEnd()->setTime($this->beginTime->format('H'), $this->beginTime->format('i'));
-        $this->beginToEnd->getEnd()->modify('+' . $this->duration . ' seconds');
+        $this->dateRange->getEnd()->setTime($this->beginTime->format('H'), $this->beginTime->format('i'));
+        $this->dateRange->getEnd()->modify('+' . $this->duration . ' seconds');
         $this->billable = $this->calculateBillable($this->billableMode);
     }
 

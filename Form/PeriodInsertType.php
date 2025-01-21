@@ -10,36 +10,26 @@
 namespace KimaiPlugin\PeriodInsertBundle\Form;
 
 use App\Configuration\SystemConfiguration;
-use App\Entity\Activity;
 use App\Entity\Customer;
-use App\Entity\Project;
-use App\Form\Type\ActivityType;
-use App\Form\Type\CustomerType;
-use App\Form\Type\DateRangeType;
+use App\Form\TimesheetEditForm;
+use App\Form\Toolbar\ToolbarFormTrait;
 use App\Form\Type\DescriptionType;
 use App\Form\Type\DurationType;
-use App\Form\Type\FixedRateType;
-use App\Form\Type\HourlyRateType;
-use App\Form\Type\ProjectType;
 use App\Form\Type\TagsType;
 use App\Form\Type\TimePickerType;
 use App\Form\Type\TimesheetBillableType;
-use App\Form\Type\UserType;
 use App\Form\Type\YesNoType;
 use App\Repository\CustomerRepository;
-use App\Repository\ProjectRepository;
 use App\Repository\Query\CustomerFormTypeQuery;
-use App\Repository\Query\ProjectFormTypeQuery;
 use KimaiPlugin\PeriodInsertBundle\Entity\PeriodInsert;
-use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\FormBuilderInterface;
-use Symfony\Component\Form\FormEvent;
-use Symfony\Component\Form\FormEvents;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 use Symfony\Component\Validator\Constraints\NotBlank;
 
-class PeriodInsertType extends AbstractType
+class PeriodInsertType extends TimesheetEditForm
 {
+    use ToolbarFormTrait;
+
     public function __construct(private CustomerRepository $customers, private SystemConfiguration $systemConfiguration)
     {
     }
@@ -69,7 +59,7 @@ class PeriodInsertType extends AbstractType
             $this->addBeginTime($builder, $dateTimeOptions);
         }
         
-        $this->addDuration($builder, $options, $isNew);
+        $this->addDuration($builder, $options, false, $isNew);
 
         $query = new CustomerFormTypeQuery($customer);
         $query->setUser($options['user']); // @phpstan-ignore-line
@@ -97,49 +87,6 @@ class PeriodInsertType extends AbstractType
         $this->addExported($builder, $options);
     }
 
-    protected function showCustomer(array $options, bool $isNew, int $customerCount): bool
-    {
-        if (!$isNew && $options['customer']) {
-            return true;
-        }
-
-        if ($customerCount < 2) {
-            return false;
-        }
-
-        if (!$options['customer']) {
-            return false;
-        }
-
-        return true;
-    }
-
-    protected function addUser(FormBuilderInterface $builder, array $options)
-    {
-        if (!$options['include_user']) {
-            return;
-        }
-
-        $builder->add('user', UserType::class, [
-            'required' => true,
-        ]);
-    }
-
-    protected function addDateRange(FormBuilderInterface $builder, array $options, bool $allowEmpty = true): void
-    {
-        $params = [
-            'required' => !$allowEmpty,
-            'allow_empty' => $allowEmpty,
-            'label' => 'Time range',
-        ];
-
-        if (\array_key_exists('timezone', $options)) {
-            $params['timezone'] = $options['timezone'];
-        }
-
-        $builder->add('beginToEnd', DateRangeType::class, $params);
-    }
-
     protected function addBeginTime(FormBuilderInterface $builder, array $dateTimeOptions): void
     {
         $timeOptions = $dateTimeOptions;
@@ -152,7 +99,7 @@ class PeriodInsertType extends AbstractType
         ]));
     }
 
-    protected function addDuration(FormBuilderInterface $builder, array $options, bool $autofocus = false): void
+    protected function addDuration(FormBuilderInterface $builder, array $options, bool $forceApply = false, bool $autofocus = false): void
     {
         $durationOptions = [
             'required' => true,
@@ -181,108 +128,6 @@ class PeriodInsertType extends AbstractType
         }
 
         $builder->add('duration', DurationType::class, $durationOptions);
-    }
-
-    protected function addCustomer(FormBuilderInterface $builder, array $customers, ?Customer $customer = null): void
-    {
-        $builder->add('customer', CustomerType::class, [
-            'query_builder_for_user' => true,
-            'customers' => $customers,
-            'data' => $customer,
-            'required' => false,
-            'placeholder' => '',
-            'mapped' => false,
-            'project_enabled' => true,
-        ]);
-    }
-
-    protected function addProject(FormBuilderInterface $builder, bool $isNew, ?Project $project = null, ?Customer $customer = null, array $options = []): void
-    {
-        $options = array_merge([
-            'placeholder' => '',
-            'activity_enabled' => true,
-            'query_builder_for_user' => true,
-            'join_customer' => true
-        ], $options);
-
-        $builder->add('project', ProjectType::class, array_merge($options, [
-            'projects' => $project,
-            'customers' => $customer,
-        ]));
-
-        // replaces the project select after submission, to make sure only projects for the selected customer are displayed
-        $builder->addEventListener(
-            FormEvents::PRE_SUBMIT,
-            function (FormEvent $event) use ($builder, $project, $customer, $isNew, $options) {
-                /** @var array<string, mixed> $data */
-                $data = $event->getData();
-                $customer = \array_key_exists('customer', $data) && $data['customer'] !== '' ? $data['customer'] : null;
-                $project = \array_key_exists('project', $data) && $data['project'] !== '' ? $data['project'] : $project;
-
-                $event->getForm()->add('project', ProjectType::class, array_merge($options, [
-                    'group_by' => null,
-                    'query_builder' => function (ProjectRepository $repo) use ($builder, $project, $customer, $isNew) {
-                        // is there a better way to prevent starting a record with a hidden project ?
-                        $project = \is_string($project) ? (int) $project : $project;
-                        $customer = \is_string($customer) ? (int) $customer : $customer;
-                        if ($isNew && \is_int($project)) {
-                            /** @var Project $project */
-                            $project = $repo->find($project);
-                            if ($project === null) {
-                                throw new \Exception('Unknown project');
-                            }
-                            if (!$project->getCustomer()->isVisible()) {
-                                $customer = null;
-                                $project = null;
-                            } elseif (!$project->isVisible()) {
-                                $project = null;
-                            }
-                        }
-
-                        if ($project !== null && !\is_int($project) && !($project instanceof Project)) {
-                            throw new \InvalidArgumentException('Project type needs a project object or an ID');
-                        }
-
-                        if ($customer !== null && !\is_int($customer) && !($customer instanceof Customer)) {
-                            throw new \InvalidArgumentException('Project type needs a customer object or an ID');
-                        }
-
-                        $query = new ProjectFormTypeQuery($project, $customer);
-                        $query->setUser($builder->getOption('user'));
-                        $query->setWithCustomer(true);
-
-                        return $repo->getQueryBuilderForFormType($query);
-                    },
-                ]));
-            }
-        );
-    }
-
-    protected function addActivity(FormBuilderInterface $builder, ?Activity $activity = null, ?Project $project = null, array $options = []): void
-    {
-        $options = array_merge(['placeholder' => '', 'query_builder_for_user' => true], $options);
-
-        $options['projects'] = $project;
-        $options['activities'] = $activity;
-
-        $builder->add('activity', ActivityType::class, $options);
-
-        // replaces the activity select after submission, to make sure only activities for the selected project are displayed
-        $builder->addEventListener(
-            FormEvents::PRE_SUBMIT,
-            function (FormEvent $event) use ($options) {
-                /** @var array<string, mixed> $data */
-                $data = $event->getData();
-
-                if (!\array_key_exists('project', $data) || $data['project'] === '' || $data['project'] === null) {
-                    return;
-                }
-
-                $options['projects'] = $data['project'];
-
-                $event->getForm()->add('activity', ActivityType::class, $options);
-            }
-        );
     }
 
     protected function addDescription(FormBuilderInterface $builder, bool $isNew): void
@@ -326,32 +171,10 @@ class PeriodInsertType extends AbstractType
         ]);
     }
 
-    protected function addRates(FormBuilderInterface $builder, $currency, array $options): void
-    {
-        if ($options['include_rate']) {
-            $builder
-            ->add('fixedRate', FixedRateType::class, [
-                'currency' => $currency,
-            ])
-            ->add('hourlyRate', HourlyRateType::class, [
-                'currency' => $currency,
-            ]);
-        }
-    }
-
     protected function addBillable(FormBuilderInterface $builder, array $options): void
     {
         if ($options['include_billable']) {
             $builder->add('billableMode', TimesheetBillableType::class, []);
-        }
-    }
-
-    protected function addExported(FormBuilderInterface $builder, array $options): void
-    {
-        if ($options['include_exported']) {
-            $builder->add('exported', YesNoType::class, [
-                'label' => 'exported'
-            ]);
         }
     }
 
@@ -380,7 +203,7 @@ class PeriodInsertType extends AbstractType
             'duration_minutes' => null,
             'duration_hours' => $maxHours,
             'attr' => [
-                'data-form-event' => 'kimai.timesheetUpdate',
+                'data-form-event' => 'kimai.periodInsertUpdate',
                 'data-msg-success' => 'action.update.success',
                 'data-msg-error' => 'action.update.error',
             ],

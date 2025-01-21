@@ -214,10 +214,9 @@ class PeriodInsert
     /**
      * @return bool
      */
-    public function isDayValid(\DateTime $day): bool
+    public function isDaySelected(\DateTime $day): bool
     {
-        $day = (int)$day->format('w') % 7;
-        return $this->days[$day < 0 ? $day + 7 : $day];
+        return $this->days[(int)$day->format('w')];
     }
 
     /**

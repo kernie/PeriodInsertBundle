@@ -46,7 +46,7 @@ class PeriodInsertRepository
     public function findDayToInsert(PeriodInsert $periodInsert): string
     {
         for ($end = clone $periodInsert->getEnd(); $end >= $periodInsert->getBegin(); $end->modify('-1 day')) {
-            if ($periodInsert->isDayValid($end)) {
+            if ($periodInsert->isDaySelected($end)) {
                 return $end->format('Y-m-d');
             }
         }
@@ -97,7 +97,7 @@ class PeriodInsertRepository
     {   
         if (!$this->configuration->isTimesheetAllowOverlappingRecords()) {
             for ($begin = clone $periodInsert->getBegin(); $begin <= $periodInsert->getEnd(); $begin->modify('+1 day')) {
-                if ($periodInsert->isDayValid($begin) && $this->timesheetRepository->hasRecordForTime($this->createTimesheet($periodInsert, $begin))) {
+                if ($periodInsert->isDaySelected($begin) && $this->timesheetRepository->hasRecordForTime($this->createTimesheet($periodInsert, $begin))) {
                     return $begin->format('m/d/Y');
                 }
             }
@@ -126,7 +126,7 @@ class PeriodInsertRepository
         $totalValidDays = 0;
         $validDaysPerMonth = [];
         for ($begin = clone $periodInsert->getBegin(); $begin <= $periodInsert->getEnd(); $begin->modify('+1 day')) {
-            if ($periodInsert->isDayValid($begin)) {
+            if ($periodInsert->isDaySelected($begin)) {
                 $totalValidDays++;
                 $validDaysPerMonth[$begin->format('Y-m')] = ($validDaysPerMonth[$begin->format('Y-m')] ?? 0) + 1;
             }
@@ -267,13 +267,24 @@ class PeriodInsertRepository
 
     /**
      * @param PeriodInsert $periodInsert
+     * @param DateTime $begin
+     * @param string[] $holidays
+     * @return bool
+     */
+    protected function checkDayValid(PeriodInsert $periodInsert, \DateTime $begin, array $holidays): bool
+    {
+        return $periodInsert->isDaySelected($begin) && $this->workService->getContractMode($periodInsert->getUser())->getCalculator($periodInsert->getUser())->isWorkDay($begin) && !in_array($begin->format('Y-m-d'), $holidays);
+    }
+
+    /**
+     * @param PeriodInsert $periodInsert
      * @return void
      */
     public function saveTimesheet(PeriodInsert $periodInsert): void
     {
         $holidays = $this->findHolidays($periodInsert);
         for ($begin = clone $periodInsert->getBegin(); $begin <= $periodInsert->getEnd(); $begin->modify('+1 day')) {
-            if ($periodInsert->isDayValid($begin) && $this->workService->getContractMode($periodInsert->getUser())->getCalculator($periodInsert->getUser())->isWorkDay($begin) && !in_array($begin->format('Y-m-d'), $holidays)) {
+            if ($this->checkDayValid($periodInsert, $begin, $holidays)) {
                 $this->timesheetService->saveNewTimesheet($this->createTimesheet($periodInsert, $begin));
             }
         }

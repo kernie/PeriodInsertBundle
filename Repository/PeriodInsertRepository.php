@@ -8,34 +8,19 @@
 
 namespace KimaiPlugin\PeriodInsertBundle\Repository;
 
-use App\Activity\ActivityStatisticService;
-use App\Configuration\LocaleService;
 use App\Configuration\SystemConfiguration;
-use App\Customer\CustomerStatisticService;
 use App\Entity\Timesheet;
-use App\Model\BudgetStatisticModel;
-use App\Project\ProjectStatisticService;
 use App\Repository\TimesheetRepository;
-use App\Timesheet\RateServiceInterface;
 use App\Timesheet\TimesheetService;
-use App\Utils\Duration;
-use App\Utils\LocaleFormatter;
 use App\WorkingTime\WorkingTimeService;
 use KimaiPlugin\PeriodInsertBundle\Entity\PeriodInsert;
-use Symfony\Component\Security\Core\Authorization\AuthorizationCheckerInterface;
 
 class PeriodInsertRepository
 {
     public function __construct(private TimesheetRepository $timesheetRepository,
         private readonly SystemConfiguration $configuration,
-        private readonly CustomerStatisticService $customerStatisticService,
-        private readonly ProjectStatisticService $projectStatisticService,
-        private readonly ActivityStatisticService $activityStatisticService,
-        private readonly RateServiceInterface $rateService,
-        private readonly AuthorizationCheckerInterface $security,
-        private readonly LocaleService $localeService,
-        private readonly WorkingTimeService $workService,
         private readonly TimesheetService $timesheetService,
+        private readonly WorkingTimeService $workService
     ) {
     }
 
@@ -107,148 +92,6 @@ class PeriodInsertRepository
 
     /**
      * @param PeriodInsert $periodInsert
-     * @return string
-     */
-    public function checkBudgetOverbooked(PeriodInsert $periodInsert): string
-    {   
-        if ($this->configuration->isTimesheetAllowOverbookingBudget()) {
-            return '';
-        }
-
-        if (!$periodInsert->isBillable()) {
-            return '';
-        }
-        
-        if ($periodInsert->getProject() === null) {
-            return '';
-        }
-
-        $totalValidDays = 0;
-        $validDaysPerMonth = [];
-        for ($begin = clone $periodInsert->getBegin(); $begin <= $periodInsert->getEnd(); $begin->modify('+1 day')) {
-            if ($periodInsert->isDaySelected($begin)) {
-                $totalValidDays++;
-                $validDaysPerMonth[$begin->format('Y-m')] = ($validDaysPerMonth[$begin->format('Y-m')] ?? 0) + 1;
-            }
-        }
-
-        $recordDate = clone $periodInsert->getBegin();
-        $duration = $periodInsert->getDuration();
-
-        $timeRate = $this->rateService->calculate($this->createTimesheet($periodInsert, $recordDate));
-        $rate = $timeRate->getRate();
-
-        $now = new \DateTime('now', $recordDate->getTimezone());
-        
-        foreach ($validDaysPerMonth as $validDaysInMonth) {
-            if (null !== ($activity = $periodInsert->getActivity()) && $activity->hasBudgets()) {
-                $dateTime = $activity->isMonthlyBudget() ? $recordDate : $now;
-                $validDays = $activity->isMonthlyBudget() ? $validDaysInMonth : $totalValidDays;
-                $stat = $this->activityStatisticService->getBudgetStatisticModel($activity, $dateTime);
-                if (($message = $this->checkBudgets($stat, $periodInsert, $duration, $rate, $validDays, 'activity')) !== '') {
-                    return $message;
-                }
-            }
-    
-            if (null !== ($project = $periodInsert->getProject())) {
-                if ($project->hasBudgets()) {
-                    $dateTime = $project->isMonthlyBudget() ? $recordDate : $now;
-                    $validDays = $project->isMonthlyBudget() ? $validDaysInMonth : $totalValidDays;
-                    $stat = $this->projectStatisticService->getBudgetStatisticModel($project, $dateTime);
-                    if (($message = $this->checkBudgets($stat, $periodInsert, $duration, $rate, $validDays, 'project')) !== '') {
-                        return $message;
-                    }
-                }
-                if (null !== ($customer = $project->getCustomer()) && $customer->hasBudgets()) {
-                    $dateTime = $customer->isMonthlyBudget() ? $recordDate : $now;
-                    $validDays = $customer->isMonthlyBudget() ? $validDaysInMonth : $totalValidDays;
-                    $stat = $this->customerStatisticService->getBudgetStatisticModel($customer, $dateTime);
-                    if (($message = $this->checkBudgets($stat, $periodInsert, $duration, $rate, $validDays, 'customer')) !== '') {
-                        return $message;
-                    }
-                }
-            }
-            $recordDate->modify('+1 month');
-        }
-        return '';
-    }
-
-    /**
-     * @param BudgetStatisticModel $stat
-     * @param PeriodInsert $periodInsert
-     * @param int $duration
-     * @param float $rate
-     * @param int $validDays
-     * @param string $field
-     * @return string
-     */
-    protected function checkBudgets(BudgetStatisticModel $stat, PeriodInsert $periodInsert, int $duration, float $rate, int $validDays, string $field): string
-    {
-        $fullRate = $stat->getBudgetSpent() + $rate * $validDays;
-
-        if ($stat->hasBudget() && $fullRate > $stat->getBudget()) {
-            return $this->getBudgetViolationMessage($periodInsert, $field, $stat->getBudget(), $stat->getBudgetSpent());
-        }
-
-        $fullDuration = $stat->getTimeBudgetSpent() + $duration * $validDays;
-
-        if ($stat->hasTimeBudget() && $fullDuration > $stat->getTimeBudget()) {
-            return $this->getTimeBudgetViolationMessage($field, $stat->getTimeBudget(), $stat->getTimeBudgetSpent());
-        }
-
-        return '';
-    }
-
-    /**
-     * @param PeriodInsert $periodInsert
-     * @param string $field
-     * @param float $budget
-     * @param float $rate
-     * @return string
-     */
-    protected function getBudgetViolationMessage(PeriodInsert $periodInsert, string $field, float $budget, float $rate): string
-    {
-        if (!$this->security->isGranted('budget_money', $field)) {
-            return 'Sorry, the budget is used up.';
-        }
-        // using the locale of the assigned user is not the best solution, but allows to be independent of the request stack
-        $helper = new LocaleFormatter($this->localeService, $periodInsert->getUser()?->getLocale() ?? 'en');
-        $currency = $periodInsert->getProject()->getCustomer()->getCurrency();
-
-        $free = $budget - $rate;
-        $free = max($free, 0);
-        $used = $helper->money($rate, $currency);
-        $budget = $helper->money($budget, $currency);
-        $free = $helper->money($free, $currency);
-
-        return 'The budget is used up. Of the available ' . $budget . ', ' . $used . ' has been booked so far, ' . $free . ' can still be used.';
-    }
-
-    /**
-     * @param string $field
-     * @param int $budget
-     * @param int $duration
-     * @return string
-     */
-    protected function getTimeBudgetViolationMessage(string $field, int $budget, int $duration): string
-    {
-        if (!$this->security->isGranted('budget_time', $field)) {
-            return 'Sorry, the budget is used up.';
-        }
-        $durationFormat = new Duration();
-
-        $free = $budget - $duration;
-        $free = max($free, 0);
-
-        $used = $durationFormat->format($duration);
-        $budget = $durationFormat->format($budget);
-        $free = $durationFormat->format($free);
-
-        return 'The budget is used up. Of the available ' . $budget . ', ' . $used . ' has been booked so far, ' . $free . ' can still be used.';
-    }
-
-    /**
-     * @param PeriodInsert $periodInsert
      * @return string[]
      */
     public function findHolidays(PeriodInsert $periodInsert): array
@@ -271,7 +114,7 @@ class PeriodInsertRepository
      * @param string[] $holidays
      * @return bool
      */
-    protected function checkDayValid(PeriodInsert $periodInsert, \DateTime $begin, array $holidays): bool
+    public function checkDayValid(PeriodInsert $periodInsert, \DateTime $begin, array $holidays): bool
     {
         return $periodInsert->isDaySelected($begin) && $this->workService->getContractMode($periodInsert->getUser())->getCalculator($periodInsert->getUser())->isWorkDay($begin) && !in_array($begin->format('Y-m-d'), $holidays);
     }

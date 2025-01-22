@@ -62,9 +62,6 @@ class PeriodInsertController extends AbstractController
             else if (($overlap = $this->repository->checkOverlappingTimeEntries($periodInsert)) !== '') {
                 $this->flashError('You already have an entry on ' . $overlap . '.');
             }
-            else if (($message = $this->repository->checkBudgetOverbooked($periodInsert)) !== '') {
-                $this->flashError($message);
-            }
             else {
                 try {
                     $this->repository->saveTimesheet($periodInsert);

@@ -65,7 +65,7 @@ class PeriodInsertValidator extends ConstraintValidator
         $value->setFields($newBegin);
         $this->repository->findHolidays($value);
 
-        $this->validateBeginAndEnd($value);
+        $this->validateTimeRange($value);
         $this->validateActivityAndProject($value);
         $this->validatePeriodInsert($value);
         $this->validateFutureTimes($value);
@@ -77,7 +77,7 @@ class PeriodInsertValidator extends ConstraintValidator
     /**
      * @param PeriodInsertEntity $periodInsert
      */
-    protected function validateBeginAndEnd(PeriodInsertEntity $periodInsert): void
+    protected function validateTimeRange(PeriodInsertEntity $periodInsert): void
     {
         $dateRange = $periodInsert->getDateRange();
 
@@ -236,11 +236,18 @@ class PeriodInsertValidator extends ConstraintValidator
         $nowBeginTs = $now->getTimestamp() + ($this->systemConfiguration->getTimesheetDefaultRoundingBegin() * 60) + 60;
         $nowEndTs = $now->getTimestamp() + ($this->systemConfiguration->getTimesheetDefaultRoundingEnd() * 60) + 60;
 
-        if ($nowBeginTs < $periodInsert->getBeginTime()->getTimestamp() || $nowEndTs < $periodInsert->getEndTime()->getTimestamp()) {
-            $this->context->buildViolation(PeriodInsertConstraint::getErrorName(PeriodInsertConstraint::TIME_RANGE_IN_FUTURE_ERROR))
+        if ($nowBeginTs < $periodInsert->getBegin()->getTimestamp()) {
+            $this->context->buildViolation(PeriodInsertConstraint::getErrorName(PeriodInsertConstraint::BEGIN_IN_FUTURE_ERROR))
+                ->atPath('begin_time')
+                ->setTranslationDomain('validators')
+                ->setCode(PeriodInsertConstraint::BEGIN_IN_FUTURE_ERROR)
+                ->addViolation();
+        }
+        else if ($nowEndTs < $periodInsert->getEnd()->getTimestamp()) {
+            $this->context->buildViolation(PeriodInsertConstraint::getErrorName(PeriodInsertConstraint::END_IN_FUTURE_ERROR))
                 ->atPath('duration')
                 ->setTranslationDomain('validators')
-                ->setCode(PeriodInsertConstraint::TIME_RANGE_IN_FUTURE_ERROR)
+                ->setCode(PeriodInsertConstraint::END_IN_FUTURE_ERROR)
                 ->addViolation();
         }
     }

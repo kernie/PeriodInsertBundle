@@ -12,6 +12,7 @@ namespace KimaiPlugin\PeriodInsertBundle\Entity;
 use App\Entity\Activity;
 use App\Entity\Project;
 use App\Entity\Tag;
+use App\Entity\Timesheet;
 use App\Entity\User;
 use App\Form\Model\DateRange;
 use Doctrine\Common\Collections\Collection;
@@ -23,7 +24,6 @@ class PeriodInsert
     private ?User $user = null;
     private ?DateRange $dateRange = null;
     private ?\DateTime $beginTime = null;
-    private ?\DateTime $endTime = null;
     private ?int $duration = null;
     private ?Project $project = null;
     private ?Activity $activity = null;
@@ -39,7 +39,7 @@ class PeriodInsert
     private ?float $fixedRate = null;
     private ?float $hourlyRate = null;
     private bool $billable = true;
-    private string $billableMode = 'auto';
+    private ?string $billableMode = Timesheet::BILLABLE_AUTOMATIC;
     private bool $exported = false;
 
     /**
@@ -75,19 +75,19 @@ class PeriodInsert
     }
 
     /**
-     * @return DateTime
+     * @return DateTime|null
      */
-    public function getBegin(): \DateTime
+    public function getBegin(): ?\DateTime
     {
-        return $this->dateRange->getBegin();
+        return $this->dateRange?->getBegin();
     }
 
     /**
-     * @return DateTime
+     * @return DateTime|null
      */
-    public function getEnd(): \DateTime
+    public function getEnd(): ?\DateTime
     {
-        return $this->dateRange->getEnd();
+        return $this->dateRange?->getEnd();
     }
 
     /**
@@ -107,23 +107,12 @@ class PeriodInsert
     }
 
     /**
-     * @return DateTime|null
-     */
-    public function getEndTime(): ?\DateTime
-    {
-        return $this->endTime;
-    }
-
-    /**
      * @param DateTime $begin
      */
     public function setFields(\DateTime $begin): void
     {
-        if ($this->beginTime === null) {
-            $this->beginTime = $begin;
-        }
+        $this->beginTime ??= $begin;
         $this->dateRange->getBegin()->setTime($this->beginTime->format('H'), $this->beginTime->format('i'));
-        $this->endTime = (clone $this->beginTime)->modify('+' . $this->duration . ' seconds');
         $this->dateRange->getEnd()->setTime($this->beginTime->format('H'), $this->beginTime->format('i'));
         $this->dateRange->getEnd()->modify('+' . $this->duration . ' seconds');
         $this->billable = $this->calculateBillable($this->billableMode);
@@ -144,7 +133,7 @@ class PeriodInsert
     {
         if ($duration !== null) {
             $secondsInADay = 24*60*60;
-            $duration = $duration % $secondsInADay;
+            $duration %= $secondsInADay;
         }
         $this->duration = $duration;
     }
@@ -399,17 +388,17 @@ class PeriodInsert
     }
 
     /**
-     * @return string
+     * @return string|null
      */
-    public function getBillableMode(): string
+    public function getBillableMode(): ?string
     {
         return $this->billableMode;
     }
 
     /**
-     * @param string $billableMode
+     * @param string|null $billableMode
      */
-    public function setBillableMode(string $billableMode): void
+    public function setBillableMode(?string $billableMode): void
     {
         $this->billableMode = $billableMode;
     }

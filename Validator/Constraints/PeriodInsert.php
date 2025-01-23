@@ -23,9 +23,11 @@ class PeriodInsert extends Constraint
     public const PROJECT_DISALLOWS_GLOBAL_ACTIVITY_ERROR = 'kimai-period-insert-bundle-07';
     public const MISSING_DAY_ERROR = 'kimai-period-insert-bundle-08';
     public const TIME_RANGE_IN_FUTURE_ERROR = 'kimai-period-insert-bundle-09';
-    public const ZERO_DURATION_ERROR = 'kimai-period-insert-bundle-10';
-    public const RECORD_OVERLAPPING_ERROR = 'kimai-period-insert-bundle-11';
-    public const BUDGET_USED_ERROR = 'kimai-period-insert-bundle-12';
+    public const BEGIN_IN_FUTURE_ERROR = 'kimai-period-insert-bundle-10';
+    public const END_IN_FUTURE_ERROR = 'kimai-period-insert-bundle-11';
+    public const ZERO_DURATION_ERROR = 'kimai-period-insert-bundle-12';
+    public const RECORD_OVERLAPPING_ERROR = 'kimai-period-insert-bundle-13';
+    public const BUDGET_USED_ERROR = 'kimai-period-insert-bundle-14';
 
     protected const ERROR_NAMES = [
         self::MISSING_TIME_RANGE_ERROR => 'You must submit a time range.',
@@ -35,8 +37,10 @@ class PeriodInsert extends Constraint
         self::PROJECT_NOT_STARTED_ERROR => 'The project has not started at that time.',
         self::PROJECT_ALREADY_ENDED_ERROR => 'The project is finished at that time.',
         self::PROJECT_DISALLOWS_GLOBAL_ACTIVITY_ERROR => 'Global activities are forbidden for the selected project.',
-        self::MISSING_DAY_ERROR => 'Could not find a day to insert in the given time range.',
+        self::MISSING_DAY_ERROR => 'Could not find a day to insert in the given time range. Check the time range for work days and absences.',
         self::TIME_RANGE_IN_FUTURE_ERROR => 'The time range cannot be in the future.',
+        self::BEGIN_IN_FUTURE_ERROR => 'The begin time cannot be in the future.',
+        self::END_IN_FUTURE_ERROR => 'The end time cannot be in the future.',
         self::ZERO_DURATION_ERROR => 'Duration cannot be zero.',
         self::RECORD_OVERLAPPING_ERROR => 'You already have an entry for this time.',
         self::BUDGET_USED_ERROR => 'Sorry, the budget is used up.',

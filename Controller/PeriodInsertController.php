@@ -46,9 +46,6 @@ class PeriodInsertController extends AbstractController
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
-            /** @var PeriodInsert $periodInsert */
-            $periodInsert = $form->getData();
-
             try {
                 $this->repository->savePeriodInsert($periodInsert);
                 $this->flashSuccess('action.update.success');

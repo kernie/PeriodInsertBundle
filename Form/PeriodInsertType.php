@@ -69,7 +69,7 @@ class PeriodInsertType extends TimesheetEditForm
         $customerCount = \count($customers);
 
         if ($this->showCustomer($options, $isNew, $customerCount)) {
-            $this->addCustomer($builder, $customers, $customer);
+            $this->addCustomer($builder, $customer);
         }
         
         $this->addProject($builder, $isNew, $project, $customer);

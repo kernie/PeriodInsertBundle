@@ -19,25 +19,26 @@ class PeriodInsertRepository
     /**
      * @var string[]
      */
-    private array $holidays;
+    private array $absences;
 
     public function __construct(private readonly SystemConfiguration $configuration,
         private readonly TimesheetService $timesheetService,
         private readonly WorkingTimeService $workService
-    ) {
+    )
+    {
     }
 
     /**
      * @param PeriodInsert $periodInsert
      */
-    public function findHolidays(PeriodInsert $periodInsert): void
+    public function findAbsences(PeriodInsert $periodInsert): void
     {
-        $this->holidays = [];
+        $this->absences = [];
         for ($begin = clone $periodInsert->getBegin(); $begin <= $periodInsert->getEnd(); $begin->modify('first day of next month')) {
             $month = $this->workService->getMonth($periodInsert->getUser(), $begin, (clone $begin)->modify('last day of this month'));
             foreach ($month->getDays() as $day) {
                 if ($day->hasAddons()) {
-                    $this->holidays[] = $day->getDay()->format('Y-m-d');
+                    $this->absences[] = $day->getDay()->format('Y-m-d');
                 }
             }
         }
@@ -48,9 +49,9 @@ class PeriodInsertRepository
      * @param DateTime $begin
      * @return bool
      */
-    public function checkDayValid(PeriodInsert $periodInsert, \DateTime $begin): bool
+    public function isDayValid(PeriodInsert $periodInsert, \DateTime $begin): bool
     {
-        return $periodInsert->isDaySelected($begin) && $this->workService->getContractMode($periodInsert->getUser())->getCalculator($periodInsert->getUser())->isWorkDay($begin) && !in_array($begin->format('Y-m-d'), $this->holidays);
+        return $periodInsert->isDaySelected($begin) && $this->workService->getContractMode($periodInsert->getUser())->getCalculator($periodInsert->getUser())->isWorkDay($begin) && !in_array($begin->format('Y-m-d'), $this->absences);
     }
 
     /**
@@ -60,7 +61,7 @@ class PeriodInsertRepository
     {
         $validatedTimesheets = [];
         for ($begin = clone $periodInsert->getBegin(); $begin <= $periodInsert->getEnd(); $begin->modify('+1 day')) {
-            if ($this->checkDayValid($periodInsert, $begin)) {
+            if ($this->isDayValid($periodInsert, $begin)) {
                 $timesheet = $this->createTimesheet($periodInsert, $begin);
                 $this->timesheetService->validateTimesheet($timesheet);
                 $validatedTimesheets[] = $timesheet;

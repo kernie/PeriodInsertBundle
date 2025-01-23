@@ -1,7 +1,7 @@
 <?php
 
 /*
- * This file is part of the Kimai time-tracking app.
+ * This file is part of the PeriodInsertBundle.
  *
  * For the full copyright and license information, please view the LICENSE
  * file that was distributed with this source code.
@@ -27,7 +27,7 @@ use Symfony\Component\Validator\Constraint;
 use Symfony\Component\Validator\ConstraintValidator;
 use Symfony\Component\Validator\Exception\UnexpectedTypeException;
 
-class PeriodInsertValidator extends ConstraintValidator
+final class PeriodInsertValidator extends ConstraintValidator
 {
     public function __construct(private readonly PeriodInsertRepository $repository,
         private readonly TimesheetRepository $timesheetRepository,
@@ -38,7 +38,8 @@ class PeriodInsertValidator extends ConstraintValidator
         private readonly RateServiceInterface $rateService,
         private readonly AuthorizationCheckerInterface $security,
         private readonly LocaleService $localeService
-    ) {
+    )
+    {
     }
 
     /**
@@ -63,7 +64,7 @@ class PeriodInsertValidator extends ConstraintValidator
         $newBegin->setTime((int) $beginTime->format('H'), (int) $beginTime->format('i'), 0, 0);
 
         $value->setFields($newBegin);
-        $this->repository->findHolidays($value);
+        $this->repository->findAbsences($value);
 
         $this->validateTimeRange($value);
         $this->validateActivityAndProject($value);
@@ -77,7 +78,7 @@ class PeriodInsertValidator extends ConstraintValidator
     /**
      * @param PeriodInsertEntity $periodInsert
      */
-    protected function validateTimeRange(PeriodInsertEntity $periodInsert): void
+    private function validateTimeRange(PeriodInsertEntity $periodInsert): void
     {
         $dateRange = $periodInsert->getDateRange();
 
@@ -93,7 +94,7 @@ class PeriodInsertValidator extends ConstraintValidator
     /**
      * @param PeriodInsertEntity $periodInsert
      */
-    protected function validateActivityAndProject(PeriodInsertEntity $periodInsert): void
+    private function validateActivityAndProject(PeriodInsertEntity $periodInsert): void
     {
         $activity = $periodInsert->getActivity();
 
@@ -156,7 +157,7 @@ class PeriodInsertValidator extends ConstraintValidator
                     return;
             } elseif (null !== $projectEnd && $periodInsertStart->getTimestamp() > $projectEnd->getTimestamp()) {
                 $this->context->buildViolation(PeriodInsertConstraint::getErrorName(PeriodInsertConstraint::PROJECT_ALREADY_ENDED_ERROR))
-                    ->atPath('project')
+                    ->atPath('daterange')
                     ->setTranslationDomain('validators')
                     ->setCode(PeriodInsertConstraint::PROJECT_ALREADY_ENDED_ERROR)
                     ->addViolation();
@@ -185,10 +186,10 @@ class PeriodInsertValidator extends ConstraintValidator
     /**
      * @param PeriodInsertEntity $periodInsert
      */
-    protected function validatePeriodInsert(PeriodInsertEntity $periodInsert): void
+    private function validatePeriodInsert(PeriodInsertEntity $periodInsert): void
     {
         for ($begin = clone $periodInsert->getBegin(); $begin <= $periodInsert->getEnd(); $begin->modify('+1 day')) {
-            if ($this->repository->checkDayValid($periodInsert, $begin)) {
+            if ($this->repository->isDayValid($periodInsert, $begin)) {
                 return;
             }
         }
@@ -203,7 +204,7 @@ class PeriodInsertValidator extends ConstraintValidator
     /**
      * @param PeriodInsertEntity $periodInsert
      */
-    protected function validateFutureTimes(PeriodInsertEntity $periodInsert): void
+    private function validateFutureTimes(PeriodInsertEntity $periodInsert): void
     {
         if ($this->systemConfiguration->isTimesheetAllowFutureTimes()) {
             return;
@@ -211,7 +212,7 @@ class PeriodInsertValidator extends ConstraintValidator
 
         $dayToInsert = null;
         for ($end = clone $periodInsert->getEnd(); $dayToInsert === null && $end >= $periodInsert->getBegin(); $end->modify('-1 day')) {
-            if ($this->repository->checkDayValid($periodInsert, $end)) {
+            if ($this->repository->isDayValid($periodInsert, $end)) {
                 $dayToInsert = $end->format('Y-m-d');
             }
         }
@@ -255,7 +256,7 @@ class PeriodInsertValidator extends ConstraintValidator
     /**
      * @param PeriodInsertEntity $periodInsert
      */
-    protected function validateZeroDuration(PeriodInsertEntity $periodInsert): void
+    private function validateZeroDuration(PeriodInsertEntity $periodInsert): void
     {
         if ($this->systemConfiguration->isTimesheetAllowZeroDuration()) {
             return;
@@ -273,7 +274,7 @@ class PeriodInsertValidator extends ConstraintValidator
     /**
      * @param PeriodInsertEntity $periodInsert
      */
-    protected function validateOverlapping(PeriodInsertEntity $periodInsert): void
+    private function validateOverlapping(PeriodInsertEntity $periodInsert): void
     {
         $dateRange = $periodInsert->getDateRange();
 
@@ -286,7 +287,7 @@ class PeriodInsertValidator extends ConstraintValidator
         }
 
         for ($begin = clone $periodInsert->getBegin(); $begin <= $periodInsert->getEnd(); $begin->modify('+1 day')) {
-            if ($this->repository->checkDayValid($periodInsert, $begin) && $this->timesheetRepository->hasRecordForTime($this->repository->createTimesheet($periodInsert, $begin))) {
+            if ($this->repository->isDayValid($periodInsert, $begin) && $this->timesheetRepository->hasRecordForTime($this->repository->createTimesheet($periodInsert, $begin))) {
                 $this->context->buildViolation('You already have an entry on ' . $begin->format('m/d/Y') . '.')
                     ->atPath('daterange')
                     ->setTranslationDomain('validators')
@@ -301,7 +302,7 @@ class PeriodInsertValidator extends ConstraintValidator
     /**
      * @param PeriodInsertEntity $periodInsert
      */
-    protected function validateBudgetUsed(PeriodInsertEntity $periodInsert): void
+    private function validateBudgetUsed(PeriodInsertEntity $periodInsert): void
     {   
         if ($this->systemConfiguration->isTimesheetAllowOverbookingBudget()) {
             return;
@@ -318,7 +319,7 @@ class PeriodInsertValidator extends ConstraintValidator
         $totalValidDays = 0;
         $validDaysPerMonth = [];
         for ($begin = clone $periodInsert->getBegin(); $begin <= $periodInsert->getEnd(); $begin->modify('+1 day')) {
-            if ($this->repository->checkDayValid($periodInsert, $begin)) {
+            if ($this->repository->isDayValid($periodInsert, $begin)) {
                 $totalValidDays++;
                 $month = $begin->format('F Y');
                 $validDaysPerMonth[$month] = ($validDaysPerMonth[$month] ?? 0) + 1;
@@ -378,7 +379,7 @@ class PeriodInsertValidator extends ConstraintValidator
      * @param string $field
      * @return bool
      */
-    protected function checkBudgets(BudgetStatisticModel $stat, PeriodInsertEntity $periodInsert, float $rate, int $duration, int $validDays, string $month, string $field): bool
+    private function checkBudgets(BudgetStatisticModel $stat, PeriodInsertEntity $periodInsert, float $rate, int $duration, int $validDays, string $month, string $field): bool
     {
         $fullRate = $stat->getBudgetSpent() + $rate * $validDays;
 
@@ -407,7 +408,7 @@ class PeriodInsertValidator extends ConstraintValidator
      * @param float $budget
      * @param float $rate
      */
-    protected function addBudgetViolationMessage(PeriodInsertEntity $periodInsert, string $field, string $month, float $insertRate, float $budget, float $rate): void
+    private function addBudgetViolationMessage(PeriodInsertEntity $periodInsert, string $field, string $month, float $insertRate, float $budget, float $rate): void
     {
         $message = PeriodInsertConstraint::getErrorName(PeriodInsertConstraint::BUDGET_USED_ERROR);
         if ($this->security->isGranted('budget_money', $field)) {
@@ -440,7 +441,7 @@ class PeriodInsertValidator extends ConstraintValidator
      * @param int $budget
      * @param int $duration
      */
-    protected function addTimeBudgetViolationMessage(string $field, string $month, int $insertDuration, int $budget, int $duration): void
+    private function addTimeBudgetViolationMessage(string $field, string $month, int $insertDuration, int $budget, int $duration): void
     {
         $message = PeriodInsertConstraint::getErrorName(PeriodInsertConstraint::BUDGET_USED_ERROR);
         if ($this->security->isGranted('budget_time', $field)) {

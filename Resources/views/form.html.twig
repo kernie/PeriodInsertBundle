@@ -29,7 +29,7 @@
             {% if form.tags is defined %}
                 {{ form_row(form.tags, {'row_attr': {'class': 'mb-3 ' ~ form.vars.name ~ '_row_' ~ form.tags.vars.name}}) }}
             {% endif %}
-            {% embed '@theme/embeds/collapsible.html.twig' with {id: 'timesheet_select_days'} %}
+            {% embed '@theme/embeds/collapsible.html.twig' with {id: 'period_insert_select_days'} %}
                 {% import "macros/widgets.html.twig" as widgets %}
                 {% block title %}{{ 'Select days'|trans }}{% endblock %}
                 {% block body %}
@@ -57,7 +57,7 @@
                 {% endblock %}
             {% endembed %}
             {% if form.fixedRate is defined or form.hourlyRate is defined or form.billableMode is defined or form.exported is defined %}
-                {% embed '@theme/embeds/collapsible.html.twig' with {id: 'timesheet_extended_settings'} %}
+                {% embed '@theme/embeds/collapsible.html.twig' with {id: 'period_insert_extended_settings'} %}
                     {% import "macros/widgets.html.twig" as widgets %}
                     {% block title %}{{ 'extended_settings'|trans }}{% endblock %}
                     {% block body %}

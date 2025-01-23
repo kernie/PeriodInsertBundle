@@ -25,15 +25,20 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 
 #[Route(path: '/period_insert')]
 #[IsGranted('period_insert')]
-class PeriodInsertController extends AbstractController
+final class PeriodInsertController extends AbstractController
 {
     public function __construct(
         protected PeriodInsertRepository $repository,
         protected TimesheetService $timesheetService,
         protected SystemConfiguration $configuration
-    ) {
+    )
+    {
     }
 
+    /**
+     * @param Request $request
+     * @return Response
+     */
     #[Route(path: '', name: 'period_insert', methods: ['GET', 'POST'])]
     public function indexAction(Request $request): Response
     {
@@ -69,7 +74,7 @@ class PeriodInsertController extends AbstractController
      * @param Timesheet $timesheet
      * @return FormInterface
      */
-    protected function getInsertForm(PeriodInsert $periodInsert, Timesheet $timesheet): FormInterface
+    private function getInsertForm(PeriodInsert $periodInsert, Timesheet $timesheet): FormInterface
     {
         return $this->createForm(PeriodInsertType::class, $periodInsert, [
             'action' => $this->generateUrl('period_insert'),
@@ -87,7 +92,7 @@ class PeriodInsertController extends AbstractController
     /**
      * @return PageSetup
      */
-    protected function createPageSetup(): PageSetup
+    private function createPageSetup(): PageSetup
     {
         $page = new PageSetup('periodinsert.title');
         $page->setHelp('https://www.kimai.org/store/lnngyn-period-insert-bundle.html');

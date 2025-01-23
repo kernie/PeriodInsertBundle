@@ -27,9 +27,9 @@ class PeriodInsert
     private ?int $duration = null;
     private ?Project $project = null;
     private ?Activity $activity = null;
-    private ?string $description = '';
+    private ?string $description = null;
     /**
-     * @var Tag[]
+     * @var Collection<Tag>
      */
     private Collection $tags;
     /**
@@ -112,8 +112,10 @@ class PeriodInsert
     public function setFields(\DateTime $begin): void
     {
         $this->beginTime ??= $begin;
-        $this->dateRange->getBegin()->setTime($this->beginTime->format('H'), $this->beginTime->format('i'));
-        $this->dateRange->getEnd()->setTime($this->beginTime->format('H'), $this->beginTime->format('i'));
+        $hour = (int) $this->beginTime->format('H');
+        $minute = (int) $this->beginTime->format('i');
+        $this->dateRange->getBegin()->setTime($hour, $minute, 0, 0);
+        $this->dateRange->getEnd()->setTime($hour, $minute, 0, 0);
         $this->dateRange->getEnd()->modify('+' . $this->duration . ' seconds');
         $this->billable = $this->calculateBillable($this->billableMode);
     }
@@ -365,7 +367,7 @@ class PeriodInsert
     /**
      * @return bool
      */
-    public function calculateBillable(): bool
+    private function calculateBillable(): bool
     {
         if ($this->billableMode === 'auto') {
             if ($this->activity !== null && !$this->activity->isBillable()) {

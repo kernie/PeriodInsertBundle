@@ -26,7 +26,7 @@ use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 use Symfony\Component\Validator\Constraints\NotBlank;
 
-class PeriodInsertType extends TimesheetEditForm
+final class PeriodInsertType extends TimesheetEditForm
 {
     use ToolbarFormTrait;
 
@@ -34,6 +34,10 @@ class PeriodInsertType extends TimesheetEditForm
     {
     }
 
+    /**
+     * @param FormBuilderInterface $builder
+     * @param mixed[] $options
+     */
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
         $activity = null;
@@ -64,7 +68,7 @@ class PeriodInsertType extends TimesheetEditForm
         $query = new CustomerFormTypeQuery($customer);
         $query->setUser($options['user']); // @phpstan-ignore-line
         $qb = $this->customers->getQueryBuilderForFormType($query);
-        /** @var array<Customer> $customers */
+        /** @var Customer[] $customers */
         $customers = $qb->getQuery()->getResult();
         $customerCount = \count($customers);
 
@@ -87,6 +91,10 @@ class PeriodInsertType extends TimesheetEditForm
         $this->addExported($builder, $options);
     }
 
+    /**
+     * @param FormBuilderInterface $builder
+     * @param mixed[] $dateTimeOptions
+     */
     protected function addBeginTime(FormBuilderInterface $builder, array $dateTimeOptions): void
     {
         $timeOptions = $dateTimeOptions;
@@ -99,6 +107,12 @@ class PeriodInsertType extends TimesheetEditForm
         ]));
     }
 
+    /**
+     * @param FormBuilderInterface $builder
+     * @param mixed[] $options
+     * @param bool $forceApply
+     * @param bool $autofocus
+     */
     protected function addDuration(FormBuilderInterface $builder, array $options, bool $forceApply = false, bool $autofocus = false): void
     {
         $durationOptions = [
@@ -130,6 +144,10 @@ class PeriodInsertType extends TimesheetEditForm
         $builder->add('duration', DurationType::class, $durationOptions);
     }
 
+    /**
+     * @param FormBuilderInterface $builder
+     * @param bool $isNew
+     */
     protected function addDescription(FormBuilderInterface $builder, bool $isNew): void
     {
         $descriptionOptions = ['required' => false];
@@ -139,6 +157,9 @@ class PeriodInsertType extends TimesheetEditForm
         $builder->add('description', DescriptionType::class, $descriptionOptions);
     }
 
+    /**
+     * @param FormBuilderInterface $builder
+     */
     protected function addTags(FormBuilderInterface $builder): void
     {
         $builder->add('tags', TagsType::class, [
@@ -146,6 +167,9 @@ class PeriodInsertType extends TimesheetEditForm
         ]);
     }
 
+    /**
+     * @param FormBuilderInterface $builder
+     */
     protected function addDays(FormBuilderInterface $builder): void
     {
         $builder->add('monday', YesNoType::class, [
@@ -171,6 +195,10 @@ class PeriodInsertType extends TimesheetEditForm
         ]);
     }
 
+    /**
+     * @param FormBuilderInterface $builder
+     * @param mixed[] $options
+     */
     protected function addBillable(FormBuilderInterface $builder, array $options): void
     {
         if ($options['include_billable']) {
@@ -178,6 +206,9 @@ class PeriodInsertType extends TimesheetEditForm
         }
     }
 
+    /**
+     * @param OptionsResolver $resolver
+     */
     public function configureOptions(OptionsResolver $resolver): void
     {
         $maxMinutes = $this->systemConfiguration->getTimesheetLongRunningDuration();

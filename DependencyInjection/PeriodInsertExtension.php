@@ -15,7 +15,7 @@ use Symfony\Component\DependencyInjection\Extension\PrependExtensionInterface;
 use Symfony\Component\DependencyInjection\Loader;
 use Symfony\Component\HttpKernel\DependencyInjection\Extension;
 
-class PeriodInsertExtension extends Extension implements PrependExtensionInterface
+final class PeriodInsertExtension extends Extension implements PrependExtensionInterface
 {
     /**
      * @param array $configs
@@ -28,6 +28,9 @@ class PeriodInsertExtension extends Extension implements PrependExtensionInterfa
         $loader->load('services.yaml');
     }
 
+    /**
+     * @param ContainerBuilder $container
+     */
     public function prepend(ContainerBuilder $container): void
     {
         /*

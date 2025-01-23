@@ -13,10 +13,13 @@ use App\Event\PermissionSectionsEvent;
 use App\Model\PermissionSection;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 
-class PermissionSectionSubscriber implements EventSubscriberInterface
+final class PermissionSectionSubscriber implements EventSubscriberInterface
 {
     public const SECTION_TITLE = 'Period Insert';
 
+    /**
+     * @return array
+     */
     public static function getSubscribedEvents(): array
     {
         return [
@@ -24,6 +27,9 @@ class PermissionSectionSubscriber implements EventSubscriberInterface
         ];
     }
 
+    /**
+     * @param PermissionSectionsEvent
+     */
     public function onEvent(PermissionSectionsEvent $event): void
     {
         $event->addSection(new PermissionSection(self::SECTION_TITLE, '_period_insert'));

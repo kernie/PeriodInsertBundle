@@ -1,7 +1,7 @@
 <?php
 
 /*
- * This file is part of the Kimai time-tracking app.
+ * This file is part of the PeriodInsertBundle.
  *
  * For the full copyright and license information, please view the LICENSE
  * file that was distributed with this source code.
@@ -12,7 +12,7 @@ namespace KimaiPlugin\PeriodInsertBundle\Validator\Constraints;
 use Symfony\Component\Validator\Constraint;
 
 #[\Attribute(\Attribute::TARGET_CLASS)]
-class PeriodInsert extends Constraint
+final class PeriodInsert extends Constraint
 {
     public const MISSING_TIME_RANGE_ERROR = 'kimai-period-insert-bundle-01';
     public const MISSING_ACTIVITY_ERROR = 'kimai-period-insert-bundle-02';
@@ -48,7 +48,10 @@ class PeriodInsert extends Constraint
 
     public string $message = 'This period insert has invalid settings.';
 
-    public function getTargets(): string|array
+    /**
+     * @return string
+     */
+    public function getTargets(): string
     {
         return self::CLASS_CONSTRAINT;
     }

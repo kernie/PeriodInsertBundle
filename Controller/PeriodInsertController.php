@@ -48,29 +48,14 @@ class PeriodInsertController extends AbstractController
         if ($form->isSubmitted() && $form->isValid()) {
             /** @var PeriodInsert $periodInsert */
             $periodInsert = $form->getData();
-            $periodInsert->setFields($timesheet->getBegin());
-            
-            if (($dayToInsert = $this->repository->findDayToInsert($periodInsert)) === '') {
-                $this->flashError('Could not find a day to insert in the given time range.');
-            }
-            else if ($this->repository->checkFutureTime($periodInsert, $dayToInsert)) {
-                $this->flashError('The time range cannot be in the future.');
-            }
-            else if ($this->repository->checkZeroDuration($periodInsert)) {
-                $this->flashError('Duration cannot be zero.');
-            }
-            else if (($overlap = $this->repository->checkOverlappingTimeEntries($periodInsert)) !== '') {
-                $this->flashError('You already have an entry on ' . $overlap . '.');
-            }
-            else {
-                try {
-                    $this->repository->saveTimesheet($periodInsert);
-                    $this->flashSuccess('action.update.success');
 
-                    return $this->redirectToRoute('period_insert');
-                } catch (\Exception $ex) {
-                    $this->flashUpdateException($ex);
-                }
+            try {
+                $this->repository->savePeriodInsert($periodInsert);
+                $this->flashSuccess('action.update.success');
+                
+                return $this->redirectToRoute('period_insert');
+            } catch (\Exception $ex) {
+                $this->handleFormUpdateException($ex, $form);
             }
         }
 

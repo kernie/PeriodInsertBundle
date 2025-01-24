@@ -68,11 +68,14 @@ final class PeriodInsertValidator extends ConstraintValidator
 
         $this->validateTimeRange($value);
         $this->validateActivityAndProject($value);
-        $this->validatePeriodInsert($value);
-        $this->validateFutureTimes($value);
         $this->validateZeroDuration($value);
-        $this->validateOverlapping($value);
-        $this->validateBudgetUsed($value);
+
+        if ($this->validatePeriodInsert($value)) {
+            $this->validateProjectDates($value);
+            $this->validateFutureTimes($value);
+            $this->validateOverlapping($value);
+            $this->validateBudgetUsed($value);
+        }
     }
 
     /**
@@ -135,6 +138,55 @@ final class PeriodInsertValidator extends ConstraintValidator
                 ->setCode(PeriodInsertConstraint::PROJECT_DISALLOWS_GLOBAL_ACTIVITY_ERROR)
                 ->addViolation();
         }
+    }
+
+    /**
+     * @param PeriodInsertEntity $periodInsert
+     */
+    private function validateZeroDuration(PeriodInsertEntity $periodInsert): void
+    {
+        if ($this->systemConfiguration->isTimesheetAllowZeroDuration()) {
+            return;
+        }
+
+        if ($periodInsert->getDuration() <= 0) {
+            $this->context->buildViolation(PeriodInsertConstraint::getErrorName(PeriodInsertConstraint::ZERO_DURATION_ERROR))
+                ->atPath('duration')
+                ->setTranslationDomain('validators')
+                ->setCode(PeriodInsertConstraint::ZERO_DURATION_ERROR)
+                ->addViolation();
+        }
+    }
+
+    /**
+     * @param PeriodInsertEntity $periodInsert
+     * @return bool
+     */
+    private function validatePeriodInsert(PeriodInsertEntity $periodInsert): bool
+    {
+        if (null !== $this->repository->findDayToInsert($periodInsert)) {
+            return true;
+        }
+
+        $this->context->buildViolation(PeriodInsertConstraint::getErrorName(PeriodInsertConstraint::MISSING_DAY_ERROR))
+                ->atPath('daterange')
+                ->setTranslationDomain('validators')
+                ->setCode(PeriodInsertConstraint::MISSING_DAY_ERROR)
+                ->addViolation();
+
+        return false;
+    }
+
+    /**
+     * @param PeriodInsertEntity $periodInsert
+     */
+    private function validateProjectDates(PeriodInsertEntity $periodInsert): void
+    {
+        $project = $periodInsert->getProject();
+
+        if (null === $project) {
+            return;
+        }
 
         $projectBegin = $project->getStart();
         $projectEnd = $project->getEnd();
@@ -143,62 +195,40 @@ final class PeriodInsertValidator extends ConstraintValidator
             return;
         }
 
-        $periodInsertStart = $periodInsert->getBegin();
-        $periodInsertEnd = $periodInsert->getEnd();
+        $periodInsertStart = $this->repository->findDayToInsert($periodInsert);
+        $periodInsertEnd = $this->repository->findDayToInsert($periodInsert, false);
 
-        if (null !== $periodInsertStart) {
-            if (null !== $projectBegin && $periodInsertStart->getTimestamp() < $projectBegin->getTimestamp()) {
-                $this->context->buildViolation(PeriodInsertConstraint::getErrorName(PeriodInsertConstraint::PROJECT_NOT_STARTED_ERROR))
-                    ->atPath('daterange')
-                    ->setTranslationDomain('validators')
-                    ->setCode(PeriodInsertConstraint::PROJECT_NOT_STARTED_ERROR)
-                    ->addViolation();
-
-                    return;
-            } elseif (null !== $projectEnd && $periodInsertStart->getTimestamp() > $projectEnd->getTimestamp()) {
-                $this->context->buildViolation(PeriodInsertConstraint::getErrorName(PeriodInsertConstraint::PROJECT_ALREADY_ENDED_ERROR))
-                    ->atPath('daterange')
-                    ->setTranslationDomain('validators')
-                    ->setCode(PeriodInsertConstraint::PROJECT_ALREADY_ENDED_ERROR)
-                    ->addViolation();
-
-                    return;
-            }
-        }
-
-        if (null !== $periodInsertEnd) {
-            if (null !== $projectEnd && $periodInsertEnd > $projectEnd) {
-                $this->context->buildViolation(PeriodInsertConstraint::getErrorName(PeriodInsertConstraint::PROJECT_ALREADY_ENDED_ERROR))
-                    ->atPath('daterange')
-                    ->setTranslationDomain('validators')
-                    ->setCode(PeriodInsertConstraint::PROJECT_ALREADY_ENDED_ERROR)
-                    ->addViolation();
-            } elseif (null !== $projectBegin && $periodInsertEnd < $projectBegin) {
-                $this->context->buildViolation(PeriodInsertConstraint::getErrorName(PeriodInsertConstraint::PROJECT_NOT_STARTED_ERROR))
-                    ->atPath('daterange')
-                    ->setTranslationDomain('validators')
-                    ->setCode(PeriodInsertConstraint::PROJECT_NOT_STARTED_ERROR)
-                    ->addViolation();
-            }
-        }
-    }
-
-    /**
-     * @param PeriodInsertEntity $periodInsert
-     */
-    private function validatePeriodInsert(PeriodInsertEntity $periodInsert): void
-    {
-        for ($begin = clone $periodInsert->getBegin(); $begin <= $periodInsert->getEnd(); $begin->modify('+1 day')) {
-            if ($this->repository->isDayValid($periodInsert, $begin)) {
-                return;
-            }
-        }
-
-        $this->context->buildViolation(PeriodInsertConstraint::getErrorName(PeriodInsertConstraint::MISSING_DAY_ERROR))
+        if (null !== $projectBegin && $periodInsertStart->getTimestamp() < $projectBegin->getTimestamp()) {
+            $this->context->buildViolation(PeriodInsertConstraint::getErrorName(PeriodInsertConstraint::PROJECT_NOT_STARTED_ERROR) . ' It starts on ' . $projectBegin->format('n/j/Y') . '.')
                 ->atPath('daterange')
                 ->setTranslationDomain('validators')
-                ->setCode(PeriodInsertConstraint::MISSING_DAY_ERROR)
+                ->setCode(PeriodInsertConstraint::PROJECT_NOT_STARTED_ERROR)
                 ->addViolation();
+        }
+
+        if (null !== $projectEnd && $periodInsertStart->getTimestamp() > $projectEnd->getTimestamp()) {
+            $this->context->buildViolation(PeriodInsertConstraint::getErrorName(PeriodInsertConstraint::PROJECT_ALREADY_ENDED_ERROR) . ' It ends on ' . $projectEnd->format('n/j/Y') . '.')
+                ->atPath('daterange')
+                ->setTranslationDomain('validators')
+                ->setCode(PeriodInsertConstraint::PROJECT_ALREADY_ENDED_ERROR)
+                ->addViolation();
+        }
+
+        if (null !== $projectEnd && $periodInsertEnd > $projectEnd) {
+            $this->context->buildViolation(PeriodInsertConstraint::getErrorName(PeriodInsertConstraint::PROJECT_ALREADY_ENDED_ERROR) . ' It ends on ' . $projectEnd->format('n/j/Y') . '.')
+                ->atPath('daterange')
+                ->setTranslationDomain('validators')
+                ->setCode(PeriodInsertConstraint::PROJECT_ALREADY_ENDED_ERROR)
+                ->addViolation();
+        }
+        
+        if (null !== $projectBegin && $periodInsertEnd < $projectBegin) {
+            $this->context->buildViolation(PeriodInsertConstraint::getErrorName(PeriodInsertConstraint::PROJECT_NOT_STARTED_ERROR) . ' It starts on ' . $projectBegin->format('n/j/Y') . '.')
+                ->atPath('daterange')
+                ->setTranslationDomain('validators')
+                ->setCode(PeriodInsertConstraint::PROJECT_NOT_STARTED_ERROR)
+                ->addViolation();
+        }
     }
 
     /**
@@ -210,12 +240,7 @@ final class PeriodInsertValidator extends ConstraintValidator
             return;
         }
 
-        $dayToInsert = null;
-        for ($end = clone $periodInsert->getEnd(); $dayToInsert === null && $end >= $periodInsert->getBegin(); $end->modify('-1 day')) {
-            if ($this->repository->isDayValid($periodInsert, $end)) {
-                $dayToInsert = $end->format('Y-m-d');
-            }
-        }
+        $dayToInsert = $this->repository->findDayToInsert($periodInsert, false)->format('Y-m-d');
 
         if ($dayToInsert < date('Y-m-d')) {
             return;
@@ -243,30 +268,11 @@ final class PeriodInsertValidator extends ConstraintValidator
                 ->setTranslationDomain('validators')
                 ->setCode(PeriodInsertConstraint::BEGIN_IN_FUTURE_ERROR)
                 ->addViolation();
-        }
-        else if ($nowEndTs < $periodInsert->getEnd()->getTimestamp()) {
+        } elseif ($nowEndTs < $periodInsert->getEnd()->getTimestamp()) {
             $this->context->buildViolation(PeriodInsertConstraint::getErrorName(PeriodInsertConstraint::END_IN_FUTURE_ERROR))
                 ->atPath('duration')
                 ->setTranslationDomain('validators')
                 ->setCode(PeriodInsertConstraint::END_IN_FUTURE_ERROR)
-                ->addViolation();
-        }
-    }
-
-    /**
-     * @param PeriodInsertEntity $periodInsert
-     */
-    private function validateZeroDuration(PeriodInsertEntity $periodInsert): void
-    {
-        if ($this->systemConfiguration->isTimesheetAllowZeroDuration()) {
-            return;
-        }
-
-        if ($periodInsert->getDuration() <= 0) {
-            $this->context->buildViolation(PeriodInsertConstraint::getErrorName(PeriodInsertConstraint::ZERO_DURATION_ERROR))
-                ->atPath('duration')
-                ->setTranslationDomain('validators')
-                ->setCode(PeriodInsertConstraint::ZERO_DURATION_ERROR)
                 ->addViolation();
         }
     }
@@ -286,16 +292,20 @@ final class PeriodInsertValidator extends ConstraintValidator
             return;
         }
 
+        $overlappingDates = [];
+
         for ($begin = clone $periodInsert->getBegin(); $begin <= $periodInsert->getEnd(); $begin->modify('+1 day')) {
             if ($this->repository->isDayValid($periodInsert, $begin) && $this->timesheetRepository->hasRecordForTime($this->repository->createTimesheet($periodInsert, $begin))) {
-                $this->context->buildViolation('You already have an entry on ' . $begin->format('m/d/Y') . '.')
-                    ->atPath('daterange')
-                    ->setTranslationDomain('validators')
-                    ->setCode(PeriodInsertConstraint::RECORD_OVERLAPPING_ERROR)
-                    ->addViolation();
-                
-                return;
+                $overlappingDates[] = $begin->format('n/j/Y');
             }
+        }
+
+        if ($overlappingDates) {
+            $this->context->buildViolation(PeriodInsertConstraint::getErrorName(PeriodInsertConstraint::RECORD_OVERLAPPING_ERROR) . implode(', ', $overlappingDates) . '.')
+                ->atPath('daterange')
+                ->setTranslationDomain('validators')
+                ->setCode(PeriodInsertConstraint::RECORD_OVERLAPPING_ERROR)
+                ->addViolation();
         }
     }
 
@@ -312,12 +322,13 @@ final class PeriodInsertValidator extends ConstraintValidator
             return;
         }
         
-        if ($periodInsert->getProject() === null) {
+        if (null === $periodInsert->getProject()) {
             return;
         }
 
         $totalValidDays = 0;
         $validDaysPerMonth = [];
+        
         for ($begin = clone $periodInsert->getBegin(); $begin <= $periodInsert->getEnd(); $begin->modify('+1 day')) {
             if ($this->repository->isDayValid($periodInsert, $begin)) {
                 $totalValidDays++;
@@ -333,40 +344,50 @@ final class PeriodInsertValidator extends ConstraintValidator
         $rate = $timeRate->getRate();
 
         $now = new \DateTime('now', $recordDate->getTimezone());
-        
-        foreach ($validDaysPerMonth as $month => $validDaysInMonth) {
-            if (null !== ($activity = $periodInsert->getActivity()) && $activity->hasBudgets()) {
-                $dateTime = $activity->isMonthlyBudget() ? $recordDate : $now;
-                $validDays = $activity->isMonthlyBudget() ? $validDaysInMonth : $totalValidDays;
-                $month = $activity->isMonthlyBudget() ? $month : '';
-                $stat = $this->activityStatisticService->getBudgetStatisticModel($activity, $dateTime);
-                if ($this->checkBudgets($stat, $periodInsert, $rate, $duration, $validDays, $month, 'activity')) {
-                    return;
+
+        if (null !== ($activity = $periodInsert->getActivity()) && $activity->hasBudgets()) {
+            if ($activity->isMonthlyBudget()) {
+                foreach ($validDaysPerMonth as $month => $validDaysInMonth) {
+                    $stat = $this->activityStatisticService->getBudgetStatisticModel($activity, $recordDate);
+                    $this->checkBudgets($stat, $periodInsert, $rate, $duration, $validDaysInMonth, 'activity', $month);
+
+                    $recordDate->modify('+1 month');
+                }
+            } else {
+                $stat = $this->activityStatisticService->getBudgetStatisticModel($activity, $now);
+                $this->checkBudgets($stat, $periodInsert, $rate, $duration, $totalValidDays, 'activity');
+            }
+        }
+
+        if (null !== ($project = $periodInsert->getProject())) {
+            if ($project->hasBudgets()) {
+                if ($project->isMonthlyBudget()) {
+                    foreach ($validDaysPerMonth as $month => $validDaysInMonth) {
+                        $stat = $this->projectStatisticService->getBudgetStatisticModel($project, $recordDate);
+                        $this->checkBudgets($stat, $periodInsert, $rate, $duration, $validDaysInMonth, 'project', $month);
+
+                        $recordDate->modify('+1 month');
+                    }
+                } else {
+                    $stat = $this->projectStatisticService->getBudgetStatisticModel($project, $now);
+                    $this->checkBudgets($stat, $periodInsert, $rate, $duration, $totalValidDays, 'project');
                 }
             }
-    
-            if (null !== ($project = $periodInsert->getProject())) {
-                if ($project->hasBudgets()) {
-                    $dateTime = $project->isMonthlyBudget() ? $recordDate : $now;
-                    $validDays = $project->isMonthlyBudget() ? $validDaysInMonth : $totalValidDays;
-                    $month = $project->isMonthlyBudget() ? $month : '';
-                    $stat = $this->projectStatisticService->getBudgetStatisticModel($project, $dateTime);
-                    if ($this->checkBudgets($stat, $periodInsert, $rate, $duration, $validDays, $month, 'project')) {
-                        return;
+
+            if (null !== ($customer = $project->getCustomer()) && $customer->hasBudgets()) {
+                if ($customer->isMonthlyBudget()) {
+                    foreach ($validDaysPerMonth as $month => $validDaysInMonth) {
+                        $stat = $this->customerStatisticService->getBudgetStatisticModel($customer, $recordDate);
+                        $this->checkBudgets($stat, $periodInsert, $rate, $duration, $validDaysInMonth, 'customer', $month);
+
+                        $recordDate->modify('+1 month');
                     }
-                }
-                if (null !== ($customer = $project->getCustomer()) && $customer->hasBudgets()) {
-                    $dateTime = $customer->isMonthlyBudget() ? $recordDate : $now;
-                    $validDays = $customer->isMonthlyBudget() ? $validDaysInMonth : $totalValidDays;
-                    $month = $customer->isMonthlyBudget() ? $month : '';
-                    $stat = $this->customerStatisticService->getBudgetStatisticModel($customer, $dateTime);
-                    if ($this->checkBudgets($stat, $periodInsert, $rate, $duration, $validDays, $month, 'customer')) {
-                        return;
-                    }
+                } else {
+                    $stat = $this->customerStatisticService->getBudgetStatisticModel($customer, $now);
+                    $this->checkBudgets($stat, $periodInsert, $rate, $duration, $totalValidDays, 'customer');
                 }
             }
-            $recordDate->modify('+1 month');
-        }   
+        }
     }
 
     /**
@@ -375,29 +396,24 @@ final class PeriodInsertValidator extends ConstraintValidator
      * @param float $rate
      * @param int $duration
      * @param int $validDays
-     * @param string $month
      * @param string $field
-     * @return bool
+     * @param string $month
      */
-    private function checkBudgets(BudgetStatisticModel $stat, PeriodInsertEntity $periodInsert, float $rate, int $duration, int $validDays, string $month, string $field): bool
+    private function checkBudgets(BudgetStatisticModel $stat, PeriodInsertEntity $periodInsert, float $rate, int $duration, int $validDays, string $field, string $month = ''): void
     {
         $fullRate = $stat->getBudgetSpent() + $rate * $validDays;
 
         if ($stat->hasBudget() && $fullRate > $stat->getBudget()) {
             $this->addBudgetViolationMessage($periodInsert, $field, $month, $rate * $validDays, $stat->getBudget(), $stat->getBudgetSpent());
-            
-            return true;
+
+            return;
         }
 
         $fullDuration = $stat->getTimeBudgetSpent() + $duration * $validDays;
 
         if ($stat->hasTimeBudget() && $fullDuration > $stat->getTimeBudget()) {
             $this->addTimeBudgetViolationMessage($field, $month, $duration * $validDays, $stat->getTimeBudget(), $stat->getTimeBudgetSpent());
-
-            return true;
         }
-
-        return false;
     }
 
     /**
@@ -411,7 +427,7 @@ final class PeriodInsertValidator extends ConstraintValidator
     private function addBudgetViolationMessage(PeriodInsertEntity $periodInsert, string $field, string $month, float $insertRate, float $budget, float $rate): void
     {
         $message = PeriodInsertConstraint::getErrorName(PeriodInsertConstraint::BUDGET_USED_ERROR);
-        if ($this->security->isGranted('budget_money', $field)) {
+        if ($this->security->isGranted('budget_' . $field)) {
             // using the locale of the assigned user is not the best solution, but allows to be independent of the request stack
             $helper = new LocaleFormatter($this->localeService, $periodInsert->getUser()?->getLocale() ?? 'en');
             $currency = $periodInsert->getProject()->getCustomer()->getCurrency();
@@ -424,8 +440,14 @@ final class PeriodInsertValidator extends ConstraintValidator
             $free = $helper->money($free, $currency);
             $insert = $helper->money($insertRate, $currency);
 
-            $message = 'The budget is used up. Of the available ' . $budget . ', ' . $used . ' has been booked so far, ' . $free . ' can still be used. The selected period insert would use ' . $insert . ' in ' . $month . '.';
+            $messageFormat = 'The budget is used up. Of the available %s, %s has been booked so far, %s can still be used. The selected period insert would use %s';
+            $message = sprintf($messageFormat, $budget, $used, $free, $insert);
         }
+        
+        if ($month !== '') {
+            $message .= ' in ' . $month;
+        }
+        $message .= '.';
 
         $this->context->buildViolation($message)
             ->atPath($field)
@@ -444,7 +466,7 @@ final class PeriodInsertValidator extends ConstraintValidator
     private function addTimeBudgetViolationMessage(string $field, string $month, int $insertDuration, int $budget, int $duration): void
     {
         $message = PeriodInsertConstraint::getErrorName(PeriodInsertConstraint::BUDGET_USED_ERROR);
-        if ($this->security->isGranted('budget_time', $field)) {
+        if ($this->security->isGranted('budget_' . $field)) {
             $durationFormat = new Duration();
             
             $free = $budget - $duration;
@@ -455,8 +477,14 @@ final class PeriodInsertValidator extends ConstraintValidator
             $free = $durationFormat->format($free);
             $insert = $durationFormat->format($insertDuration);
 
-            $message = 'The budget is used up. Of the available ' . $budget . ', ' . $used . ' has been booked so far, ' . $free . ' can still be used. The selected period insert would use ' . $insert . ' in ' . $month . '.';
+            $messageFormat = 'The budget is used up. Of the available %s, %s has been booked so far, %s can still be used. The selected period insert would use %s';
+            $message = sprintf($messageFormat, $budget, $used, $free, $insert);
         }
+        
+        if ($month !== '') {
+            $message .= ' in ' . $month;
+        }
+        $message .= '.';
 
         $this->context->buildViolation($message)
             ->atPath($field)

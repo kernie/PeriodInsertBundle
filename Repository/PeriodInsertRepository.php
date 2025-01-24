@@ -30,10 +30,31 @@ class PeriodInsertRepository
 
     /**
      * @param PeriodInsert $periodInsert
+     * @param bool $fromBegin
+     * @return DateTime
+     */
+    public function findDayToInsert(PeriodInsert $periodInsert, $fromBegin = true): ?\DateTime
+    {
+        $start = $fromBegin ? clone $periodInsert->getBegin() : clone $periodInsert->getEnd();
+        $end = $fromBegin ? $periodInsert->getEnd() : $periodInsert->getBegin();
+        $modify = $fromBegin ? '+1 day' : '-1 day';
+
+        for ($day = $start; $fromBegin ? $day <= $end : $day >= $end; $day->modify($modify)) {
+            if ($this->isDayValid($periodInsert, $day)) {
+                return $day;
+            }
+        }
+        
+        return null;
+    }
+
+    /**
+     * @param PeriodInsert $periodInsert
      */
     public function findAbsences(PeriodInsert $periodInsert): void
     {
         $this->absences = [];
+
         for ($begin = clone $periodInsert->getBegin(); $begin <= $periodInsert->getEnd(); $begin->modify('first day of next month')) {
             $month = $this->workService->getMonth($periodInsert->getUser(), $begin, (clone $begin)->modify('last day of this month'));
             foreach ($month->getDays() as $day) {
@@ -60,6 +81,7 @@ class PeriodInsertRepository
     public function savePeriodInsert(PeriodInsert $periodInsert): void
     {
         $validatedTimesheets = [];
+
         for ($begin = clone $periodInsert->getBegin(); $begin <= $periodInsert->getEnd(); $begin->modify('+1 day')) {
             if ($this->isDayValid($periodInsert, $begin)) {
                 $timesheet = $this->createTimesheet($periodInsert, $begin);
@@ -67,6 +89,7 @@ class PeriodInsertRepository
                 $validatedTimesheets[] = $timesheet;
             }
         }
+
         foreach ($validatedTimesheets as $timesheet) {
             $this->timesheetService->saveNewTimesheet($timesheet);
         }

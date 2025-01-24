@@ -16,7 +16,7 @@ use App\Timesheet\TimesheetService;
 use App\Utils\PageSetup;
 use App\Validator\ValidationFailedException;
 use KimaiPlugin\PeriodInsertBundle\Entity\PeriodInsert;
-use KimaiPlugin\PeriodInsertBundle\Form\PeriodInsertType;
+use KimaiPlugin\PeriodInsertBundle\Form\PeriodInsertForm;
 use KimaiPlugin\PeriodInsertBundle\Repository\PeriodInsertRepository;
 use Symfony\Component\Form\FormInterface;
 use Symfony\Component\HttpFoundation\Request;
@@ -80,7 +80,7 @@ final class PeriodInsertController extends AbstractController
      */
     private function getInsertForm(PeriodInsert $periodInsert, Timesheet $timesheet): FormInterface
     {
-        return $this->createForm(PeriodInsertType::class, $periodInsert, [
+        return $this->createForm(PeriodInsertForm::class, $periodInsert, [
             'action' => $this->generateUrl('period_insert'),
             'include_user' => $this->isGranted('create_other_timesheet'),
             'include_rate' => $this->isGranted('edit_rate', $timesheet),

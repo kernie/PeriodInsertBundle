@@ -21,6 +21,8 @@ use KimaiPlugin\PeriodInsertBundle\Validator\Constraints as Constraints;
 #[Constraints\PeriodInsert]
 class PeriodInsert
 {
+    public const SECONDS_IN_A_DAY = 24 * 60 * 60;
+
     private ?User $user = null;
     private ?DateRange $dateRange = null;
     private ?\DateTime $beginTime = null;
@@ -115,21 +117,16 @@ class PeriodInsert
         return $this;
     }
 
-    /**
-     * @param DateTime $begin
-     */
-    public function setFields(\DateTime $begin): void
+    public function setFields(): void
     {
-        $this->beginTime ??= $begin;
-
         $hour = (int) $this->beginTime->format('H');
         $minute = (int) $this->beginTime->format('i');
         
-        $this->dateRange->getBegin()->setTime($hour, $minute, 0, 0);
-        $this->dateRange->getEnd()->setTime($hour, $minute, 0, 0);
+        $this->dateRange->getBegin()->setTime($hour, $minute);
+        $this->dateRange->getEnd()->setTime($hour, $minute);
         $this->dateRange->getEnd()->modify('+' . $this->duration . ' seconds');
         
-        $this->billable = $this->calculateBillable($this->billableMode);
+        $this->setBillable($this->calculateBillable());
     }
 
     /**
@@ -146,12 +143,7 @@ class PeriodInsert
      */
     public function setDuration(?int $duration): PeriodInsert
     {
-        if (null !== $duration) {
-            $secondsInADay = 24 * 60 * 60;
-            $duration %= $secondsInADay;
-        }
-        
-        $this->duration = $duration;
+        $this->duration = $duration !== null ? $duration % PeriodInsert::SECONDS_IN_A_DAY : $duration;
 
         return $this;
     }

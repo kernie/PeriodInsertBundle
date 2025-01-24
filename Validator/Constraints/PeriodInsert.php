@@ -36,7 +36,7 @@ final class PeriodInsert extends Constraint
         self::ACTIVITY_PROJECT_MISMATCH_ERROR => 'Project mismatch, project specific activity and timesheet project are different.',
         self::PROJECT_DISALLOWS_GLOBAL_ACTIVITY_ERROR => 'Global activities are forbidden for the selected project.',
         self::ZERO_DURATION_ERROR => 'Duration cannot be zero.',
-        self::MISSING_DAY_ERROR => 'Could not find a day to insert in the selected time range. Check the time range for work days and absences.',
+        self::MISSING_DAY_ERROR => 'Could not find a valid day in the selected time range. Check the time range for work days and absences.',
         self::PROJECT_NOT_STARTED_ERROR => 'The project has not started during the selected time range.',
         self::PROJECT_ALREADY_ENDED_ERROR => 'The project is finished during the selected time range.',
         self::TIME_RANGE_IN_FUTURE_ERROR => 'The time range cannot be in the future.',

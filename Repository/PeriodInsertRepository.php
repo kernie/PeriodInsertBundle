@@ -8,7 +8,6 @@
 
 namespace KimaiPlugin\PeriodInsertBundle\Repository;
 
-use App\Configuration\SystemConfiguration;
 use App\Entity\Timesheet;
 use App\Timesheet\TimesheetService;
 use App\WorkingTime\WorkingTimeService;
@@ -21,10 +20,7 @@ class PeriodInsertRepository
      */
     private array $absences;
 
-    public function __construct(private readonly SystemConfiguration $configuration,
-        private readonly TimesheetService $timesheetService,
-        private readonly WorkingTimeService $workService
-    )
+    public function __construct(private readonly TimesheetService $timesheetService, private readonly WorkingTimeService $workService)
     {
     }
 
@@ -35,7 +31,7 @@ class PeriodInsertRepository
      */
     public function findDayToInsert(PeriodInsert $periodInsert, $fromBegin = true): ?\DateTime
     {
-        $start = $fromBegin ? clone $periodInsert->getBegin() : clone $periodInsert->getEnd();
+        $start = $fromBegin ? clone $periodInsert->getBegin() : (clone $periodInsert->getEnd())->modify('-' . $periodInsert->getDuration() . ' seconds');
         $end = $fromBegin ? $periodInsert->getEnd() : $periodInsert->getBegin();
         $modify = $fromBegin ? '+1 day' : '-1 day';
 
@@ -77,6 +73,7 @@ class PeriodInsertRepository
 
     /**
      * @param PeriodInsert $periodInsert
+     * @throws ValidationFailedException for invalid timesheets
      */
     public function savePeriodInsert(PeriodInsert $periodInsert): void
     {

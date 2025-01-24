@@ -14,6 +14,7 @@ use App\Controller\AbstractController;
 use App\Entity\Timesheet;
 use App\Timesheet\TimesheetService;
 use App\Utils\PageSetup;
+use App\Validator\ValidationFailedException;
 use KimaiPlugin\PeriodInsertBundle\Entity\PeriodInsert;
 use KimaiPlugin\PeriodInsertBundle\Form\PeriodInsertType;
 use KimaiPlugin\PeriodInsertBundle\Repository\PeriodInsertRepository;
@@ -46,6 +47,9 @@ final class PeriodInsertController extends AbstractController
 
         $periodInsert = new PeriodInsert();
         $periodInsert->setUser($this->getUser());
+        if (!$this->timesheetService->getActiveTrackingMode()->canEditBegin()) {
+            $periodInsert->setBeginTime($timesheet->getBegin());
+        }
 
         $form = $this->getInsertForm($periodInsert, $timesheet);
         $form->handleRequest($request);
@@ -56,7 +60,7 @@ final class PeriodInsertController extends AbstractController
                 $this->flashSuccess('action.update.success');
                 
                 return $this->redirectToRoute('period_insert');
-            } catch (\Exception $ex) {
+            } catch (ValidationFailedException $ex) {
                 $this->handleFormUpdateException($ex, $form);
             }
         }

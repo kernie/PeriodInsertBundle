@@ -52,10 +52,13 @@ class PeriodInsert
 
     /**
      * @param User|null $user
+     * @return PeriodInsert
      */
-    public function setUser(?User $user): void
+    public function setUser(?User $user): PeriodInsert
     {
         $this->user = $user;
+
+        return $this;
     }
 
     /**
@@ -68,10 +71,13 @@ class PeriodInsert
 
     /**
      * @param DateRange|null $dateRange
+     * @return PeriodInsert
      */
-    public function setDateRange(?DateRange $dateRange): void
+    public function setDateRange(?DateRange $dateRange): PeriodInsert
     {
         $this->dateRange = $dateRange;
+
+        return $this;
     }
 
     /**
@@ -100,10 +106,13 @@ class PeriodInsert
 
     /**
      * @param DateTime|null $beginTime
+     * @return PeriodInsert
      */
-    public function setBeginTime(?\DateTime $beginTime): void
+    public function setBeginTime(?\DateTime $beginTime): PeriodInsert
     {
         $this->beginTime = $beginTime;
+
+        return $this;
     }
 
     /**
@@ -112,11 +121,14 @@ class PeriodInsert
     public function setFields(\DateTime $begin): void
     {
         $this->beginTime ??= $begin;
+
         $hour = (int) $this->beginTime->format('H');
         $minute = (int) $this->beginTime->format('i');
+        
         $this->dateRange->getBegin()->setTime($hour, $minute, 0, 0);
         $this->dateRange->getEnd()->setTime($hour, $minute, 0, 0);
         $this->dateRange->getEnd()->modify('+' . $this->duration . ' seconds');
+        
         $this->billable = $this->calculateBillable($this->billableMode);
     }
 
@@ -130,14 +142,18 @@ class PeriodInsert
 
     /**
      * @param int|null $duration
+     * @return PeriodInsert
      */
-    public function setDuration(?int $duration)
+    public function setDuration(?int $duration): PeriodInsert
     {
-        if ($duration !== null) {
-            $secondsInADay = 24*60*60;
+        if (null !== $duration) {
+            $secondsInADay = 24 * 60 * 60;
             $duration %= $secondsInADay;
         }
+        
         $this->duration = $duration;
+
+        return $this;
     }
     
     /**
@@ -150,10 +166,13 @@ class PeriodInsert
 
     /**
      * @param Project|null $project
+     * @return PeriodInsert
      */
-    public function setProject(?Project $project): void
+    public function setProject(?Project $project): PeriodInsert
     {
         $this->project = $project;
+
+        return $this;
     }
 
     /**
@@ -166,10 +185,13 @@ class PeriodInsert
 
     /**
      * @param Activity|null $activity
+     * @return PeriodInsert
      */
-    public function setActivity(?Activity $activity): void
+    public function setActivity(?Activity $activity): PeriodInsert
     {
         $this->activity = $activity;
+
+        return $this;
     }
 
     /**
@@ -182,10 +204,13 @@ class PeriodInsert
 
     /**
      * @param string|null $description
+     * @return PeriodInsert
      */
-    public function setDescription(?string $description): void
+    public function setDescription(?string $description): PeriodInsert
     {
         $this->description = $description;
+
+        return $this;
     }
 
     /**
@@ -198,10 +223,13 @@ class PeriodInsert
 
     /**
      * @param Collection<Tag> $tags
+     * @return PeriodInsert
      */
-    public function setTags(Collection $tags): void
+    public function setTags(Collection $tags): PeriodInsert
     {
         $this->tags = $tags;
+
+        return $this;
     }
 
     /**
@@ -222,10 +250,13 @@ class PeriodInsert
 
     /**
      * @param bool $monday
+     * @return PeriodInsert
      */
-    public function setMonday(bool $monday): void
+    public function setMonday(bool $monday): PeriodInsert
     {
         $this->days[1] = $monday;
+
+        return $this;
     }
 
     /**
@@ -238,10 +269,13 @@ class PeriodInsert
 
     /**
      * @param bool $tuesday
+     * @return PeriodInsert
      */
-    public function setTuesday(bool $tuesday): void
+    public function setTuesday(bool $tuesday): PeriodInsert
     {
         $this->days[2] = $tuesday;
+
+        return $this;
     }
 
     /**
@@ -254,10 +288,13 @@ class PeriodInsert
 
     /**
      * @param bool $wednesday
+     * @return PeriodInsert
      */
-    public function setWednesday(bool $wednesday): void
+    public function setWednesday(bool $wednesday): PeriodInsert
     {
         $this->days[3] = $wednesday;
+
+        return $this;
     }
 
     /**
@@ -270,10 +307,13 @@ class PeriodInsert
 
     /**
      * @param bool $thursday
+     * @return PeriodInsert
      */
-    public function setThursday(bool $thursday): void
+    public function setThursday(bool $thursday): PeriodInsert
     {
         $this->days[4] = $thursday;
+
+        return $this;
     }
 
     /**
@@ -286,10 +326,13 @@ class PeriodInsert
 
     /**
      * @param bool $friday
+     * @return PeriodInsert
      */
-    public function setFriday(bool $friday): void
+    public function setFriday(bool $friday): PeriodInsert
     {
         $this->days[5] = $friday;
+
+        return $this;
     }
 
     /**
@@ -302,10 +345,13 @@ class PeriodInsert
 
     /**
      * @param bool $saturday
+     * @return PeriodInsert
      */
-    public function setSaturday(bool $saturday): void
+    public function setSaturday(bool $saturday): PeriodInsert
     {
         $this->days[6] = $saturday;
+
+        return $this;
     }
 
     /**
@@ -318,10 +364,13 @@ class PeriodInsert
 
     /**
      * @param bool $sunday
+     * @return PeriodInsert
      */
-    public function setSunday(bool $sunday): void
+    public function setSunday(bool $sunday): PeriodInsert
     {
         $this->days[0] = $sunday;
+
+        return $this;
     }
 
     /**
@@ -334,10 +383,13 @@ class PeriodInsert
 
     /**
      * @param float|null $fixedRate
+     * @return PeriodInsert
      */
-    public function setFixedRate(?float $fixedRate): void
+    public function setFixedRate(?float $fixedRate): PeriodInsert
     {
         $this->fixedRate = $fixedRate;
+
+        return $this;
     }
 
     /**
@@ -350,10 +402,13 @@ class PeriodInsert
 
     /**
      * @param float|null $hourlyRate
+     * @return PeriodInsert
      */
-    public function setHourlyRate(?float $hourlyRate): void
+    public function setHourlyRate(?float $hourlyRate): PeriodInsert
     {
         $this->hourlyRate = $hourlyRate;
+
+        return $this;
     }
 
     /**
@@ -362,6 +417,17 @@ class PeriodInsert
     public function isBillable(): bool
     {
         return $this->billable;
+    }
+
+    /**
+     * @param bool $billable
+     * @return PeriodInsert
+     */
+    public function setBillable(bool $billable): PeriodInsert
+    {
+        $this->billable = $billable;
+
+        return $this;
     }
 
     /**
@@ -384,8 +450,10 @@ class PeriodInsert
                     return false;
                 }
             }
+
             return true;
         }
+
         return $this->billableMode === 'yes';
     }
 
@@ -415,9 +483,12 @@ class PeriodInsert
 
     /**
      * @param bool $exported
+     * @return PeriodInsert
      */
-    public function setExported(bool $exported): void
+    public function setExported(bool $exported): PeriodInsert
     {
         $this->exported = $exported;
+
+        return $this;
     }
 }

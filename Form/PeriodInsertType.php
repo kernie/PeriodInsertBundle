@@ -154,6 +154,7 @@ final class PeriodInsertType extends TimesheetEditForm
         if (!$isNew) {
             $descriptionOptions['attr'] = ['autofocus' => 'autofocus'];
         }
+
         $builder->add('description', DescriptionType::class, $descriptionOptions);
     }
 
@@ -172,27 +173,28 @@ final class PeriodInsertType extends TimesheetEditForm
      */
     protected function addDays(FormBuilderInterface $builder): void
     {
-        $builder->add('monday', YesNoType::class, [
-            'label' => 'Monday'
-        ]);
-        $builder->add('tuesday', YesNoType::class, [
-            'label' => 'Tuesday'
-        ]);
-        $builder->add('wednesday', YesNoType::class, [
-            'label' => 'Wednesday'
-        ]);
-        $builder->add('thursday', YesNoType::class, [
-            'label' => 'Thursday'
-        ]);
-        $builder->add('friday', YesNoType::class, [
-            'label' => 'Friday'
-        ]);
-        $builder->add('saturday', YesNoType::class, [
-            'label' => 'Saturday'
-        ]);
-        $builder->add('sunday', YesNoType::class, [
-            'label' => 'Sunday'
-        ]);
+        $builder
+            ->add('monday', YesNoType::class, [
+                'label' => 'Monday',
+            ])
+            ->add('tuesday', YesNoType::class, [
+                'label' => 'Tuesday',
+            ])
+            ->add('wednesday', YesNoType::class, [
+                'label' => 'Wednesday',
+            ])
+            ->add('thursday', YesNoType::class, [
+                'label' => 'Thursday',
+            ])
+            ->add('friday', YesNoType::class, [
+                'label' => 'Friday',
+            ])
+            ->add('saturday', YesNoType::class, [
+                'label' => 'Saturday',
+            ])
+            ->add('sunday', YesNoType::class, [
+                'label' => 'Sunday',
+            ]);
     }
 
     /**

@@ -56,7 +56,6 @@ final class PeriodInsertValidator extends ConstraintValidator
             throw new UnexpectedTypeException($value, PeriodInsertEntity::class);
         }
 
-        $value->setFields();
         $this->repository->findAbsences($value);
 
         $this->validateTimeRange($value);

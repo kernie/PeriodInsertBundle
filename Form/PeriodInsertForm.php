@@ -11,8 +11,9 @@ namespace KimaiPlugin\PeriodInsertBundle\Form;
 
 use App\Configuration\SystemConfiguration;
 use App\Entity\Customer;
+use App\Entity\Timesheet;
 use App\Form\TimesheetEditForm;
-use App\Form\Toolbar\ToolbarFormTrait;
+use App\Form\Type\DateRangeType;
 use App\Form\Type\DescriptionType;
 use App\Form\Type\DurationType;
 use App\Form\Type\TagsType;
@@ -23,13 +24,13 @@ use App\Repository\CustomerRepository;
 use App\Repository\Query\CustomerFormTypeQuery;
 use KimaiPlugin\PeriodInsertBundle\Entity\PeriodInsert;
 use Symfony\Component\Form\FormBuilderInterface;
+use Symfony\Component\Form\FormEvent;
+use Symfony\Component\Form\FormEvents;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 use Symfony\Component\Validator\Constraints\NotBlank;
 
 final class PeriodInsertForm extends TimesheetEditForm
 {
-    use ToolbarFormTrait;
-
     public function __construct(private CustomerRepository $customers, private SystemConfiguration $systemConfiguration)
     {
     }
@@ -89,6 +90,36 @@ final class PeriodInsertForm extends TimesheetEditForm
         $this->addRates($builder, $currency, $options);
         $this->addBillable($builder, $options);
         $this->addExported($builder, $options);
+    }
+
+    protected function addDateRange(FormBuilderInterface $builder, array $options, bool $allowEmpty = true): void
+    {
+        $params = [
+            'required' => !$allowEmpty,
+            'allow_empty' => $allowEmpty,
+        ];
+
+        if (\array_key_exists('timezone', $options)) {
+            $params['timezone'] = $options['timezone'];
+        }
+
+        $builder->add('daterange', DateRangeType::class, $params);
+
+        $builder->addEventListener(
+            FormEvents::SUBMIT,
+            function (FormEvent $event) {
+                /** @var PeriodInsert $periodInsert */
+                $periodInsert = $event->getData();
+                $dateRange = $periodInsert->getDateRange();
+
+                $hour = (int) $periodInsert->getBeginTime()->format('H');
+                $minute = (int) $periodInsert->getBeginTime()->format('i');
+
+                $dateRange->getBegin()->setTime($hour, $minute);
+                $dateRange->getEnd()->setTime($hour, $minute);
+                $dateRange->getEnd()->modify('+' . $periodInsert->getDuration() . ' seconds');
+            }
+        );
     }
 
     /**
@@ -173,28 +204,13 @@ final class PeriodInsertForm extends TimesheetEditForm
      */
     protected function addDays(FormBuilderInterface $builder): void
     {
-        $builder
-            ->add('monday', YesNoType::class, [
-                'label' => 'Monday',
-            ])
-            ->add('tuesday', YesNoType::class, [
-                'label' => 'Tuesday',
-            ])
-            ->add('wednesday', YesNoType::class, [
-                'label' => 'Wednesday',
-            ])
-            ->add('thursday', YesNoType::class, [
-                'label' => 'Thursday',
-            ])
-            ->add('friday', YesNoType::class, [
-                'label' => 'Friday',
-            ])
-            ->add('saturday', YesNoType::class, [
-                'label' => 'Saturday',
-            ])
-            ->add('sunday', YesNoType::class, [
-                'label' => 'Sunday',
-            ]);
+        $builder->add('monday', YesNoType::class)
+            ->add('tuesday', YesNoType::class)
+            ->add('wednesday', YesNoType::class)
+            ->add('thursday', YesNoType::class)
+            ->add('friday', YesNoType::class)
+            ->add('saturday', YesNoType::class)
+            ->add('sunday', YesNoType::class);
     }
 
     /**
@@ -206,6 +222,45 @@ final class PeriodInsertForm extends TimesheetEditForm
         if ($options['include_billable']) {
             $builder->add('billableMode', TimesheetBillableType::class, []);
         }
+
+        $builder->addEventListener(
+            FormEvents::SUBMIT,
+            function (FormEvent $event) {
+                /** @var PeriodInsert $periodInsert */
+                $periodInsert = $event->getData();
+
+                switch ($periodInsert->getBillableMode()) {
+                    case Timesheet::BILLABLE_NO:
+                        $periodInsert->setBillable(false);
+                        break;
+                    case Timesheet::BILLABLE_YES:
+                        $periodInsert->setBillable(true);
+                        break;
+                    case Timesheet::BILLABLE_AUTOMATIC:
+                        $billable = true;
+        
+                        $activity = $periodInsert->getActivity();
+                        if ($activity !== null && !$activity->isBillable()) {
+                            $billable = false;
+                        }
+        
+                        $project = $periodInsert->getProject();
+                        if ($billable && $project !== null && !$project->isBillable()) {
+                            $billable = false;
+                        }
+        
+                        if ($billable && $project !== null) {
+                            $customer = $project->getCustomer();
+                            if ($customer !== null && !$customer->isBillable()) {
+                                $billable = false;
+                            }
+                        }
+
+                        $periodInsert->setBillable($billable);
+                        break;
+                }
+            }
+        );
     }
 
     /**

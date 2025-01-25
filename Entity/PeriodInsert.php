@@ -117,18 +117,6 @@ class PeriodInsert
         return $this;
     }
 
-    public function setFields(): void
-    {
-        $hour = (int) $this->beginTime->format('H');
-        $minute = (int) $this->beginTime->format('i');
-        
-        $this->dateRange->getBegin()->setTime($hour, $minute);
-        $this->dateRange->getEnd()->setTime($hour, $minute);
-        $this->dateRange->getEnd()->modify('+' . $this->duration . ' seconds');
-        
-        $this->setBillable($this->calculateBillable());
-    }
-
     /**
      * @return int|null
      */
@@ -420,33 +408,6 @@ class PeriodInsert
         $this->billable = $billable;
 
         return $this;
-    }
-
-    /**
-     * @return bool
-     */
-    private function calculateBillable(): bool
-    {
-        if ($this->billableMode === 'auto') {
-            if ($this->activity !== null && !$this->activity->isBillable()) {
-                return false;
-            }
-            
-            if ($this->project !== null) {
-                if (!$this->project->isBillable()) {
-                    return false;
-                }
-                
-                $customer = $this->project->getCustomer();
-                if ($customer !== null && !$customer->isBillable()) {
-                    return false;
-                }
-            }
-
-            return true;
-        }
-
-        return $this->billableMode === 'yes';
     }
 
     /**

@@ -89,7 +89,6 @@ final class PeriodInsertController extends AbstractController
             'allow_begin_datetime' => $this->timesheetService->getActiveTrackingMode()->canEditBegin(),
             'duration_minutes' => $this->configuration->getTimesheetIncrementDuration(),
             'timezone' => $this->getDateTimeFactory()->getTimezone()->getName(),
-            'customer' => true,
         ]);
     }
 

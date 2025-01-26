@@ -31,42 +31,29 @@ use Symfony\Component\Validator\Constraints\NotBlank;
 
 final class PeriodInsertForm extends TimesheetEditForm
 {
-    public function __construct(private CustomerRepository $customers, private SystemConfiguration $systemConfiguration)
+    public function __construct(private readonly CustomerRepository $customers, private readonly SystemConfiguration $systemConfiguration)
     {
     }
 
     /**
      * @param FormBuilderInterface $builder
-     * @param mixed[] $options
+     * @param array<string, string|bool|int|null|array<string, mixed>> $options
      */
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
-        $activity = null;
-        $project = null;
-        $customer = null;
         $currency = false;
         $isNew = true;
 
         $this->addUser($builder, $options);
-        $this->addDateRange($builder, $options, false);
-
-        $dateTimeOptions = [
-            'model_timezone' => $options['timezone'],
-            'view_timezone' => $options['timezone'],
-        ];
-
-        // primarily for API usage, where we cannot use a user/locale specific format
-        if (null !== $options['date_format']) {
-            $dateTimeOptions['format'] = $options['date_format'];
-        }
+        $this->addDateRange($builder, $options);
 
         if ($options['allow_begin_datetime']) {
-            $this->addBeginTime($builder, $dateTimeOptions);
+            $this->addBeginTime($builder, $options);
         }
         
-        $this->addDuration($builder, $options, false, $isNew);
+        $this->addDuration($builder, $options, !$options['allow_begin_datetime'], $isNew);
 
-        $query = new CustomerFormTypeQuery($customer);
+        $query = new CustomerFormTypeQuery();
         $query->setUser($options['user']); // @phpstan-ignore-line
         $qb = $this->customers->getQueryBuilderForFormType($query);
         /** @var Customer[] $customers */
@@ -74,36 +61,39 @@ final class PeriodInsertForm extends TimesheetEditForm
         $customerCount = \count($customers);
 
         if ($this->showCustomer($options, $isNew, $customerCount)) {
-            $this->addCustomer($builder, $customer);
+            $this->addCustomer($builder);
         }
         
-        $this->addProject($builder, $isNew, $project, $customer);
-        $this->addActivity($builder, $activity, $project, [
-            'allow_create' => false,
-        ]);
+        $this->addProject($builder, $isNew);
+        $this->addActivity($builder);
 
-        $this->addDescription($builder, $isNew);
-        $this->addTags($builder);
+        $builder->add('description', DescriptionType::class, ['required' => false]);
+        $builder->add('tags', TagsType::class, ['required' => false]);
 
-        $this->addDays($builder);
+        $builder->add('monday', YesNoType::class)
+            ->add('tuesday', YesNoType::class)
+            ->add('wednesday', YesNoType::class)
+            ->add('thursday', YesNoType::class)
+            ->add('friday', YesNoType::class)
+            ->add('saturday', YesNoType::class)
+            ->add('sunday', YesNoType::class);
         
         $this->addRates($builder, $currency, $options);
         $this->addBillable($builder, $options);
         $this->addExported($builder, $options);
     }
 
-    protected function addDateRange(FormBuilderInterface $builder, array $options, bool $allowEmpty = true): void
+    /**
+     * @param FormBuilderInterface $builder
+     * @param array<string, string|bool|int|null|array<string, mixed>> $options
+     */
+    protected function addDateRange(FormBuilderInterface $builder, array $options): void
     {
-        $params = [
-            'required' => !$allowEmpty,
-            'allow_empty' => $allowEmpty,
-        ];
-
-        if (\array_key_exists('timezone', $options)) {
-            $params['timezone'] = $options['timezone'];
-        }
-
-        $builder->add('daterange', DateRangeType::class, $params);
+        $builder->add('daterange', DateRangeType::class, [
+            'required' => true,
+            'allow_empty' => false,
+            'timezone' => $options['timezone'],
+        ]);
 
         $builder->addEventListener(
             FormEvents::SUBMIT,
@@ -124,23 +114,23 @@ final class PeriodInsertForm extends TimesheetEditForm
 
     /**
      * @param FormBuilderInterface $builder
-     * @param mixed[] $dateTimeOptions
+     * @param array<string, string|bool|int|null|array<string, mixed>> $options
      */
-    protected function addBeginTime(FormBuilderInterface $builder, array $dateTimeOptions): void
+    protected function addBeginTime(FormBuilderInterface $builder, array $options): void
     {
-        $timeOptions = $dateTimeOptions;
-
-        $builder->add('begin_time', TimePickerType::class, array_merge($timeOptions, [
+        $builder->add('begin_time', TimePickerType::class, [
             'label' => 'Begin',
             'constraints' => [
                 new NotBlank()
-            ]
-        ]));
+            ],
+            'model_timezone' => $options['timezone'],
+            'view_timezone' => $options['timezone'],
+        ]);
     }
 
     /**
      * @param FormBuilderInterface $builder
-     * @param mixed[] $options
+     * @param array<string, string|bool|int|null|array<string, mixed>> $options
      * @param bool $forceApply
      * @param bool $autofocus
      */
@@ -148,7 +138,6 @@ final class PeriodInsertForm extends TimesheetEditForm
     {
         $durationOptions = [
             'required' => true,
-            //'toggle' => true,
             'attr' => [
                 'placeholder' => '0:00',
             ],
@@ -177,45 +166,7 @@ final class PeriodInsertForm extends TimesheetEditForm
 
     /**
      * @param FormBuilderInterface $builder
-     * @param bool $isNew
-     */
-    protected function addDescription(FormBuilderInterface $builder, bool $isNew): void
-    {
-        $descriptionOptions = ['required' => false];
-        if (!$isNew) {
-            $descriptionOptions['attr'] = ['autofocus' => 'autofocus'];
-        }
-
-        $builder->add('description', DescriptionType::class, $descriptionOptions);
-    }
-
-    /**
-     * @param FormBuilderInterface $builder
-     */
-    protected function addTags(FormBuilderInterface $builder): void
-    {
-        $builder->add('tags', TagsType::class, [
-            'required' => false,
-        ]);
-    }
-
-    /**
-     * @param FormBuilderInterface $builder
-     */
-    protected function addDays(FormBuilderInterface $builder): void
-    {
-        $builder->add('monday', YesNoType::class)
-            ->add('tuesday', YesNoType::class)
-            ->add('wednesday', YesNoType::class)
-            ->add('thursday', YesNoType::class)
-            ->add('friday', YesNoType::class)
-            ->add('saturday', YesNoType::class)
-            ->add('sunday', YesNoType::class);
-    }
-
-    /**
-     * @param FormBuilderInterface $builder
-     * @param mixed[] $options
+     * @param array<string, string|bool|int|null|array<string, mixed>> $options
      */
     protected function addBillable(FormBuilderInterface $builder, array $options): void
     {
@@ -286,7 +237,7 @@ final class PeriodInsertForm extends TimesheetEditForm
             'method' => 'POST',
             'date_format' => null,
             'timezone' => date_default_timezone_get(),
-            'customer' => false, // for API usage
+            'customer' => true,
             'allow_begin_datetime' => true,
             'duration_minutes' => null,
             'duration_hours' => $maxHours,

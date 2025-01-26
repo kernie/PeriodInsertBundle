@@ -18,7 +18,7 @@ final class PermissionSectionSubscriber implements EventSubscriberInterface
     public const SECTION_TITLE = 'Period Insert';
 
     /**
-     * @return array
+     * @return array<string, array<mixed>>
      */
     public static function getSubscribedEvents(): array
     {

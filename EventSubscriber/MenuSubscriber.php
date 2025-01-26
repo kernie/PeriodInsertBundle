@@ -24,7 +24,7 @@ final class MenuSubscriber implements EventSubscriberInterface
     }
 
     /**
-     * @return array
+     * @return array<string, array<mixed>>
      */
     public static function getSubscribedEvents(): array
     {

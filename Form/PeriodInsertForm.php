@@ -22,6 +22,7 @@ use App\Form\Type\TimesheetBillableType;
 use App\Form\Type\YesNoType;
 use App\Repository\CustomerRepository;
 use App\Repository\Query\CustomerFormTypeQuery;
+use App\WorkingTime\WorkingTimeService;
 use KimaiPlugin\PeriodInsertBundle\Entity\PeriodInsert;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\Form\FormEvent;
@@ -31,7 +32,10 @@ use Symfony\Component\Validator\Constraints\NotBlank;
 
 final class PeriodInsertForm extends TimesheetEditForm
 {
-    public function __construct(private readonly CustomerRepository $customers, private readonly SystemConfiguration $systemConfiguration)
+    public function __construct(private readonly CustomerRepository $customers,
+        private readonly SystemConfiguration $systemConfiguration,
+        private readonly WorkingTimeService $workService
+    )
     {
     }
 
@@ -81,6 +85,37 @@ final class PeriodInsertForm extends TimesheetEditForm
         $this->addRates($builder, $currency, $options);
         $this->addBillable($builder, $options);
         $this->addExported($builder, $options);
+
+        // find days that will be inserted by the period insert (selected + no absences + on a work day)
+        $builder->addEventListener(
+            FormEvents::SUBMIT,
+            function (FormEvent $event) {
+                /** @var PeriodInsert $periodInsert */
+                $periodInsert = $event->getData();
+
+                $currentMonth = '';
+                
+                for ($begin = clone $periodInsert->getBegin(), $end = $periodInsert->getEnd(); $begin <= $end; $begin->modify('+1 day')) {
+                    if ($currentMonth !== $begin->format('Y-m')) {
+                        /** @var DateTime[] $absences */
+                        $absences = [];
+                        $month = $this->workService->getMonth($periodInsert->getUser(), $begin, $end);
+
+                        foreach ($month->getDays() as $day) {
+                            if ($day->hasAddons() || !$this->workService->getContractMode($periodInsert->getUser())->getCalculator($periodInsert->getUser())->isWorkDay($day->getDay())) {
+                                $absences[] = $day->getDay()->format('Y-m-d');
+                            }
+                        }
+
+                        $currentMonth = $begin->format('Y-m');
+                    }
+
+                    if ($periodInsert->isDaySelected($begin) && !in_array($begin->format('Y-m-d'), $absences)) {
+                        $periodInsert->addValidDay($begin);
+                    }
+                }
+            }
+        );
     }
 
     /**

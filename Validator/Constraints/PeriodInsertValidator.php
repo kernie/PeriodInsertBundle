@@ -19,6 +19,8 @@ use App\Repository\TimesheetRepository;
 use App\Timesheet\RateServiceInterface;
 use App\Utils\Duration;
 use App\Utils\LocaleFormatter;
+use DateTime;
+use DateTimeImmutable;
 use KimaiPlugin\PeriodInsertBundle\Entity\PeriodInsert as PeriodInsertEntity;
 use KimaiPlugin\PeriodInsertBundle\Repository\PeriodInsertRepository;
 use KimaiPlugin\PeriodInsertBundle\Validator\Constraints\PeriodInsert as PeriodInsertConstraint;
@@ -55,8 +57,6 @@ final class PeriodInsertValidator extends ConstraintValidator
         if (!\is_object($value) || !($value instanceof PeriodInsertEntity)) {
             throw new UnexpectedTypeException($value, PeriodInsertEntity::class);
         }
-
-        $this->repository->findAbsences($value);
 
         $this->validateTimeRange($value);
         $this->validateActivityAndProject($value);
@@ -156,7 +156,7 @@ final class PeriodInsertValidator extends ConstraintValidator
      */
     private function validatePeriodInsert(PeriodInsertEntity $periodInsert): bool
     {
-        if (null !== $this->repository->findDayToInsert($periodInsert)) {
+        if ($periodInsert->getValidDays()) {
             return true;
         }
 
@@ -187,8 +187,9 @@ final class PeriodInsertValidator extends ConstraintValidator
             return;
         }
 
-        $periodInsertStart = $this->repository->findDayToInsert($periodInsert);
-        $periodInsertEnd = $this->repository->findDayToInsert($periodInsert, false)->modify('+' . $periodInsert->getDuration() . ' seconds');
+        $validDays = $periodInsert->getValidDays();
+        $periodInsertStart = reset($validDays);
+        $periodInsertEnd = end($validDays)->modify('+' . $periodInsert->getDuration() . ' seconds');
 
         if (null !== $projectBegin && ($periodInsertStart->getTimestamp() < $projectBegin->getTimestamp() || $periodInsertEnd < $projectBegin)) {
             $this->context->buildViolation(PeriodInsertConstraint::getErrorName(PeriodInsertConstraint::PROJECT_NOT_STARTED_ERROR) . ' It starts on ' . $projectBegin->format('n/j/Y') . '.')
@@ -216,7 +217,8 @@ final class PeriodInsertValidator extends ConstraintValidator
             return;
         }
 
-        $dayToInsert = $this->repository->findDayToInsert($periodInsert, false)->format('Y-m-d');
+        $validDays = $periodInsert->getValidDays();
+        $dayToInsert = end($validDays)->format('Y-m-d');
 
         if ($dayToInsert < date('Y-m-d')) {
             return;
@@ -232,7 +234,7 @@ final class PeriodInsertValidator extends ConstraintValidator
             return;
         }
 
-        $now = new \DateTime('now', $periodInsert->getBeginTime()->getTimezone());
+        $now = new DateTime('now', $periodInsert->getBeginTime()->getTimezone());
 
         // allow configured default rounding time + 1 minute
         $nowBeginTs = $now->getTimestamp() + ($this->systemConfiguration->getTimesheetDefaultRoundingBegin() * 60) + 60;
@@ -270,9 +272,9 @@ final class PeriodInsertValidator extends ConstraintValidator
 
         $overlappingDates = [];
 
-        for ($begin = clone $periodInsert->getBegin(); $begin <= $periodInsert->getEnd(); $begin->modify('+1 day')) {
-            if ($this->repository->isDayValid($periodInsert, $begin) && $this->timesheetRepository->hasRecordForTime($this->repository->createTimesheet($periodInsert, $begin))) {
-                $overlappingDates[] = $begin->format('n/j/Y');
+        foreach ($periodInsert->getValidDays() as $day) {
+            if ($this->timesheetRepository->hasRecordForTime($this->repository->createTimesheet($periodInsert, $day))) {
+                $overlappingDates[] = $day->format('n/j/Y');
             }
         }
 
@@ -303,65 +305,53 @@ final class PeriodInsertValidator extends ConstraintValidator
         }
 
         $validDaysPerMonth = [];
-        
-        for ($begin = clone $periodInsert->getBegin(); $begin <= $periodInsert->getEnd(); $begin->modify('+1 day')) {
-            if ($this->repository->isDayValid($periodInsert, $begin)) {
-                $month = $begin->format('F Y');
-                $validDaysPerMonth[$month] = ($validDaysPerMonth[$month] ?? 0) + 1;
-            }
-        }
 
-        $totalValidDays = array_sum($validDaysPerMonth);
+        foreach ($periodInsert->getValidDays() as $day) {
+            $month = $day->format('F Y');
+            $validDaysPerMonth[$month] = ($validDaysPerMonth[$month] ?? 0) + 1;
+        }
         
-        $recordDate = clone $periodInsert->getBegin();
-        $duration = $periodInsert->getDuration();
+        $recordDate = DateTimeImmutable::createFromMutable($periodInsert->getBegin());
 
         $timeRate = $this->rateService->calculate($this->repository->createTimesheet($periodInsert, $recordDate));
         $rate = $timeRate->getRate();
+        $duration = $periodInsert->getDuration();
 
-        $now = new \DateTime('now', $recordDate->getTimezone());
+        $now = new DateTime('now', $recordDate->getTimezone());
 
-        if (null !== ($activity = $periodInsert->getActivity()) && $activity->hasBudgets()) {
-            if ($activity->isMonthlyBudget()) {
+        $this->checkBudgetsForEntity($periodInsert->getActivity(), $this->activityStatisticService, 'activity', $validDaysPerMonth, $periodInsert, $rate, $duration, $recordDate, $now);
+
+        $project = $periodInsert->getProject();
+        $this->checkBudgetsForEntity($project, $this->projectStatisticService, 'project', $validDaysPerMonth, $periodInsert, $rate, $duration, $recordDate, $now);
+
+        if (null !== $project) {
+            $this->checkBudgetsForEntity($project->getCustomer(), $this->customerStatisticService, 'customer', $validDaysPerMonth, $periodInsert, $rate, $duration, $recordDate, $now);
+        }
+    }
+
+    /**
+     * @param \App\Entity\Customer|\App\Entity\Project|\App\Entity\Activity $entity
+     * @param CustomerStatisticService|ProjectStatisticService|ActivityStatisticService $statisticService
+     * @param string $type
+     * @param array<string, int> $validDaysPerMonth
+     * @param PeriodInsertEntity $periodInsert
+     * @param float $rate
+     * @param int $duration
+     * @param DateTimeImmutable $recordDate
+     * @param DateTime $now
+     */
+    private function checkBudgetsForEntity($entity, $statisticService, $type, $validDaysPerMonth, $periodInsert, $rate, $duration, $recordDate, $now) {
+        if (null !== $entity && $entity->hasBudgets()) {
+            if ($entity->isMonthlyBudget()) {
                 foreach ($validDaysPerMonth as $month => $validDaysInMonth) {
-                    $stat = $this->activityStatisticService->getBudgetStatisticModel($activity, $recordDate);
-                    $this->checkBudgets($stat, $periodInsert, $rate, $duration, $validDaysInMonth, 'activity', $month);
+                    $stat = $statisticService->getBudgetStatisticModel($entity, $recordDate);
+                    $this->checkBudgets($stat, $periodInsert, $rate, $duration, $validDaysInMonth, $type, $month);
 
                     $recordDate->modify('+1 month');
                 }
             } else {
-                $stat = $this->activityStatisticService->getBudgetStatisticModel($activity, $now);
-                $this->checkBudgets($stat, $periodInsert, $rate, $duration, $totalValidDays, 'activity');
-            }
-        }
-
-        if (null !== ($project = $periodInsert->getProject())) {
-            if ($project->hasBudgets()) {
-                if ($project->isMonthlyBudget()) {
-                    foreach ($validDaysPerMonth as $month => $validDaysInMonth) {
-                        $stat = $this->projectStatisticService->getBudgetStatisticModel($project, $recordDate);
-                        $this->checkBudgets($stat, $periodInsert, $rate, $duration, $validDaysInMonth, 'project', $month);
-
-                        $recordDate->modify('+1 month');
-                    }
-                } else {
-                    $stat = $this->projectStatisticService->getBudgetStatisticModel($project, $now);
-                    $this->checkBudgets($stat, $periodInsert, $rate, $duration, $totalValidDays, 'project');
-                }
-            }
-
-            if (null !== ($customer = $project->getCustomer()) && $customer->hasBudgets()) {
-                if ($customer->isMonthlyBudget()) {
-                    foreach ($validDaysPerMonth as $month => $validDaysInMonth) {
-                        $stat = $this->customerStatisticService->getBudgetStatisticModel($customer, $recordDate);
-                        $this->checkBudgets($stat, $periodInsert, $rate, $duration, $validDaysInMonth, 'customer', $month);
-
-                        $recordDate->modify('+1 month');
-                    }
-                } else {
-                    $stat = $this->customerStatisticService->getBudgetStatisticModel($customer, $now);
-                    $this->checkBudgets($stat, $periodInsert, $rate, $duration, $totalValidDays, 'customer');
-                }
+                $stat = $statisticService->getBudgetStatisticModel($entity, $now);
+                $this->checkBudgets($stat, $periodInsert, $rate, $duration, \count($periodInsert->getValidDays()), $type);
             }
         }
     }

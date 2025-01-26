@@ -15,17 +15,19 @@ use App\Entity\Tag;
 use App\Entity\Timesheet;
 use App\Entity\User;
 use App\Form\Model\DateRange;
+use DateTime;
+use DateTimeImmutable;
 use Doctrine\Common\Collections\Collection;
 use KimaiPlugin\PeriodInsertBundle\Validator\Constraints as Constraints;
 
 #[Constraints\PeriodInsert]
 class PeriodInsert
 {
-    public const SECONDS_IN_A_DAY = 24 * 60 * 60;
+    private const SECONDS_IN_A_DAY = 24 * 60 * 60;
 
     private ?User $user = null;
     private ?DateRange $dateRange = null;
-    private ?\DateTime $beginTime = null;
+    private ?DateTime $beginTime = null;
     private ?int $duration = null;
     private ?Project $project = null;
     private ?Activity $activity = null;
@@ -43,6 +45,10 @@ class PeriodInsert
     private bool $billable = true;
     private ?string $billableMode = Timesheet::BILLABLE_AUTOMATIC;
     private bool $exported = false;
+    /**
+     * @var DateTimeImmutable[]
+     */
+    private array $validDays = [];
 
     /**
      * @return User|null
@@ -85,7 +91,7 @@ class PeriodInsert
     /**
      * @return DateTime|null
      */
-    public function getBegin(): ?\DateTime
+    public function getBegin(): ?DateTime
     {
         return $this->dateRange?->getBegin();
     }
@@ -93,7 +99,7 @@ class PeriodInsert
     /**
      * @return DateTime|null
      */
-    public function getEnd(): ?\DateTime
+    public function getEnd(): ?DateTime
     {
         return $this->dateRange?->getEnd();
     }
@@ -101,7 +107,7 @@ class PeriodInsert
     /**
      * @return DateTime|null
      */
-    public function getBeginTime(): ?\DateTime
+    public function getBeginTime(): ?DateTime
     {
         return $this->beginTime;
     }
@@ -110,7 +116,7 @@ class PeriodInsert
      * @param DateTime|null $beginTime
      * @return PeriodInsert
      */
-    public function setBeginTime(?\DateTime $beginTime): PeriodInsert
+    public function setBeginTime(?DateTime $beginTime): PeriodInsert
     {
         $this->beginTime = $beginTime;
 
@@ -213,11 +219,12 @@ class PeriodInsert
     }
 
     /**
+     * @param DateTime $day
      * @return bool
      */
-    public function isDaySelected(\DateTime $day): bool
+    public function isDaySelected(DateTime $day): bool
     {
-        return $this->days[(int)$day->format('w')];
+        return $this->days[(int) $day->format('w')];
     }
 
     /**
@@ -441,6 +448,28 @@ class PeriodInsert
     public function setExported(bool $exported): PeriodInsert
     {
         $this->exported = $exported;
+
+        return $this;
+    }
+
+    /**
+     * @return DateTimeImmutable[]
+     */
+    public function getValidDays(): array
+    {
+        return $this->validDays;
+    }
+
+    /**
+     * @param DateTime
+     * @return PeriodInsert
+     */
+    public function addValidDay(DateTime $day): PeriodInsert
+    {
+        if (in_array($day, $this->validDays)) {
+            return $this;
+        }
+        $this->validDays[] = DateTimeImmutable::createFromMutable($day);
 
         return $this;
     }

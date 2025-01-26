@@ -130,6 +130,34 @@ final class PeriodInsertValidator extends ConstraintValidator
                 ->setCode(PeriodInsertConstraint::PROJECT_DISALLOWS_GLOBAL_ACTIVITY_ERROR)
                 ->addViolation();
         }
+
+        if ($hasActivity && !$activity->isVisible()) {
+            $context->buildViolation(PeriodInsertConstraint::getErrorName(PeriodInsertConstraint::DISABLED_ACTIVITY_ERROR))
+                ->atPath('activity')
+                ->setTranslationDomain('validators')
+                ->setCode(PeriodInsertConstraint::DISABLED_ACTIVITY_ERROR)
+                ->addViolation();
+        }
+
+        if (!$project->isVisible()) {
+            $context->buildViolation(PeriodInsertConstraint::getErrorName(PeriodInsertConstraint::DISABLED_PROJECT_ERROR))
+                ->atPath('project')
+                ->setTranslationDomain('validators')
+                ->setCode(PeriodInsertConstraint::DISABLED_PROJECT_ERROR)
+                ->addViolation();
+        }
+
+        if (null === ($customer = $project->getCustomer())) {
+            return;
+        }
+
+        if (!$customer->isVisible()) {
+            $context->buildViolation(PeriodInsertConstraint::getErrorName(PeriodInsertConstraint::DISABLED_CUSTOMER_ERROR))
+                ->atPath('customer')
+                ->setTranslationDomain('validators')
+                ->setCode(PeriodInsertConstraint::DISABLED_CUSTOMER_ERROR)
+                ->addViolation();
+        }
     }
 
     /**

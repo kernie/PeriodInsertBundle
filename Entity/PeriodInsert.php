@@ -12,22 +12,28 @@ namespace KimaiPlugin\PeriodInsertBundle\Entity;
 use App\Entity\Activity;
 use App\Entity\Project;
 use App\Entity\Tag;
+use App\Entity\Timesheet;
 use App\Entity\User;
 use App\Form\Model\DateRange;
+use DateTime;
+use DateTimeImmutable;
 use Doctrine\Common\Collections\Collection;
+use KimaiPlugin\PeriodInsertBundle\Validator\Constraints as Constraints;
 
+#[Constraints\PeriodInsert]
 class PeriodInsert
 {
+    private const SECONDS_IN_A_DAY = 24 * 60 * 60;
+
     private ?User $user = null;
-    private ?DateRange $beginToEnd = null;
-    private ?\DateTime $beginTime = null;
-    private ?\DateTime $endTime = null;
+    private ?DateRange $dateRange = null;
+    private ?DateTime $beginTime = null;
     private ?int $duration = null;
     private ?Project $project = null;
     private ?Activity $activity = null;
-    private ?string $description = '';
+    private ?string $description = null;
     /**
-     * @var Tag[]
+     * @var Collection<Tag>
      */
     private Collection $tags;
     /**
@@ -37,8 +43,12 @@ class PeriodInsert
     private ?float $fixedRate = null;
     private ?float $hourlyRate = null;
     private bool $billable = true;
-    private string $billableMode = 'auto';
+    private ?string $billableMode = Timesheet::BILLABLE_AUTOMATIC;
     private bool $exported = false;
+    /**
+     * @var DateTimeImmutable[]
+     */
+    private array $validDays = [];
 
     /**
      * @return User|null
@@ -50,81 +60,67 @@ class PeriodInsert
 
     /**
      * @param User|null $user
+     * @return PeriodInsert
      */
-    public function setUser(?User $user): void
+    public function setUser(?User $user): PeriodInsert
     {
         $this->user = $user;
+
+        return $this;
     }
 
     /**
      * @return DateRange|null
      */
-    public function getBeginToEnd(): ?DateRange
+    public function getDateRange(): ?DateRange
     {
-        return $this->beginToEnd;
+        return $this->dateRange;
     }
 
     /**
-     * @param DateRange|null $begintoEnd
+     * @param DateRange|null $dateRange
+     * @return PeriodInsert
      */
-    public function setBeginToEnd(?DateRange $beginToEnd): void
+    public function setDateRange(?DateRange $dateRange): PeriodInsert
     {
-        $this->beginToEnd = $beginToEnd;
-    }
+        $this->dateRange = $dateRange;
 
-    /**
-     * @return DateTime|null
-     */
-    public function getBegin(): ?\DateTime
-    {
-        if ($this->beginToEnd !== null) {
-            return $this->beginToEnd->getBegin();
-        }
-        return null;
+        return $this;
     }
 
     /**
      * @return DateTime|null
      */
-    public function getEnd(): ?\DateTime
+    public function getBegin(): ?DateTime
     {
-        if ($this->beginToEnd !== null) {
-            return $this->beginToEnd->getEnd();
-        }
-        return null;
+        return $this->dateRange?->getBegin();
     }
 
     /**
      * @return DateTime|null
      */
-    public function getBeginTime(): ?\DateTime
+    public function getEnd(): ?DateTime
+    {
+        return $this->dateRange?->getEnd();
+    }
+
+    /**
+     * @return DateTime|null
+     */
+    public function getBeginTime(): ?DateTime
     {
         return $this->beginTime;
     }
 
     /**
      * @param DateTime|null $beginTime
+     * @return PeriodInsert
      */
-    public function setBeginTime(?\DateTime $beginTime): void
+    public function setBeginTime(?DateTime $beginTime): PeriodInsert
     {
         $this->beginTime = $beginTime;
-    }
 
-    /**
-     * @return DateTime|null
-     */
-    public function getEndTime(): ?\DateTime
-    {
-        return $this->endTime;
-    }
-
-    public function setFields(): void
-    {
-        $this->beginToEnd->getBegin()->setTime($this->beginTime->format('H'), $this->beginTime->format('i'));
-        $this->endTime = (clone $this->beginTime)->modify('+' . $this->duration . ' seconds');
-        $this->beginToEnd->getEnd()->setTime($this->beginTime->format('H'), $this->beginTime->format('i'));
-        $this->beginToEnd->getEnd()->modify('+' . $this->duration . ' seconds');
-        $this->billable = $this->calculateBillable($this->billableMode);
+        return $this;
     }
 
     /**
@@ -137,14 +133,13 @@ class PeriodInsert
 
     /**
      * @param int|null $duration
+     * @return PeriodInsert
      */
-    public function setDuration(?int $duration)
+    public function setDuration(?int $duration): PeriodInsert
     {
-        if ($duration !== null) {
-            $secondsInADay = 24*60*60;
-            $duration = $duration % $secondsInADay;
-        }
-        $this->duration = $duration;
+        $this->duration = $duration !== null ? $duration % PeriodInsert::SECONDS_IN_A_DAY : $duration;
+
+        return $this;
     }
     
     /**
@@ -157,10 +152,13 @@ class PeriodInsert
 
     /**
      * @param Project|null $project
+     * @return PeriodInsert
      */
-    public function setProject(?Project $project): void
+    public function setProject(?Project $project): PeriodInsert
     {
         $this->project = $project;
+
+        return $this;
     }
 
     /**
@@ -173,10 +171,13 @@ class PeriodInsert
 
     /**
      * @param Activity|null $activity
+     * @return PeriodInsert
      */
-    public function setActivity(?Activity $activity): void
+    public function setActivity(?Activity $activity): PeriodInsert
     {
         $this->activity = $activity;
+
+        return $this;
     }
 
     /**
@@ -189,10 +190,13 @@ class PeriodInsert
 
     /**
      * @param string|null $description
+     * @return PeriodInsert
      */
-    public function setDescription(?string $description): void
+    public function setDescription(?string $description): PeriodInsert
     {
         $this->description = $description;
+
+        return $this;
     }
 
     /**
@@ -205,19 +209,22 @@ class PeriodInsert
 
     /**
      * @param Collection<Tag> $tags
+     * @return PeriodInsert
      */
-    public function setTags(Collection $tags): void
+    public function setTags(Collection $tags): PeriodInsert
     {
         $this->tags = $tags;
+
+        return $this;
     }
 
     /**
+     * @param DateTime $day
      * @return bool
      */
-    public function isDayValid(\DateTime $day): bool
+    public function isDaySelected(DateTime $day): bool
     {
-        $day = (int)$day->format('w') % 7;
-        return $this->days[$day < 0 ? $day + 7 : $day];
+        return $this->days[(int) $day->format('w')];
     }
 
     /**
@@ -230,10 +237,13 @@ class PeriodInsert
 
     /**
      * @param bool $monday
+     * @return PeriodInsert
      */
-    public function setMonday(bool $monday): void
+    public function setMonday(bool $monday): PeriodInsert
     {
         $this->days[1] = $monday;
+
+        return $this;
     }
 
     /**
@@ -246,10 +256,13 @@ class PeriodInsert
 
     /**
      * @param bool $tuesday
+     * @return PeriodInsert
      */
-    public function setTuesday(bool $tuesday): void
+    public function setTuesday(bool $tuesday): PeriodInsert
     {
         $this->days[2] = $tuesday;
+
+        return $this;
     }
 
     /**
@@ -262,10 +275,13 @@ class PeriodInsert
 
     /**
      * @param bool $wednesday
+     * @return PeriodInsert
      */
-    public function setWednesday(bool $wednesday): void
+    public function setWednesday(bool $wednesday): PeriodInsert
     {
         $this->days[3] = $wednesday;
+
+        return $this;
     }
 
     /**
@@ -278,10 +294,13 @@ class PeriodInsert
 
     /**
      * @param bool $thursday
+     * @return PeriodInsert
      */
-    public function setThursday(bool $thursday): void
+    public function setThursday(bool $thursday): PeriodInsert
     {
         $this->days[4] = $thursday;
+
+        return $this;
     }
 
     /**
@@ -294,10 +313,13 @@ class PeriodInsert
 
     /**
      * @param bool $friday
+     * @return PeriodInsert
      */
-    public function setFriday(bool $friday): void
+    public function setFriday(bool $friday): PeriodInsert
     {
         $this->days[5] = $friday;
+
+        return $this;
     }
 
     /**
@@ -310,10 +332,13 @@ class PeriodInsert
 
     /**
      * @param bool $saturday
+     * @return PeriodInsert
      */
-    public function setSaturday(bool $saturday): void
+    public function setSaturday(bool $saturday): PeriodInsert
     {
         $this->days[6] = $saturday;
+
+        return $this;
     }
 
     /**
@@ -326,10 +351,13 @@ class PeriodInsert
 
     /**
      * @param bool $sunday
+     * @return PeriodInsert
      */
-    public function setSunday(bool $sunday): void
+    public function setSunday(bool $sunday): PeriodInsert
     {
         $this->days[0] = $sunday;
+
+        return $this;
     }
 
     /**
@@ -342,10 +370,13 @@ class PeriodInsert
 
     /**
      * @param float|null $fixedRate
+     * @return PeriodInsert
      */
-    public function setFixedRate(?float $fixedRate): void
+    public function setFixedRate(?float $fixedRate): PeriodInsert
     {
         $this->fixedRate = $fixedRate;
+
+        return $this;
     }
 
     /**
@@ -358,10 +389,13 @@ class PeriodInsert
 
     /**
      * @param float|null $hourlyRate
+     * @return PeriodInsert
      */
-    public function setHourlyRate(?float $hourlyRate): void
+    public function setHourlyRate(?float $hourlyRate): PeriodInsert
     {
         $this->hourlyRate = $hourlyRate;
+
+        return $this;
     }
 
     /**
@@ -373,42 +407,28 @@ class PeriodInsert
     }
 
     /**
-     * @return bool
+     * @param bool $billable
+     * @return PeriodInsert
      */
-    public function calculateBillable(): bool
+    public function setBillable(bool $billable): PeriodInsert
     {
-        if ($this->billableMode === 'auto') {
-            if ($this->activity !== null && !$this->activity->isBillable()) {
-                return false;
-            }
-            
-            if ($this->project !== null) {
-                if (!$this->project->isBillable()) {
-                    return false;
-                }
-                
-                $customer = $this->project->getCustomer();
-                if ($customer !== null && !$customer->isBillable()) {
-                    return false;
-                }
-            }
-            return true;
-        }
-        return $this->billableMode === 'yes';
+        $this->billable = $billable;
+
+        return $this;
     }
 
     /**
-     * @return string
+     * @return string|null
      */
-    public function getBillableMode(): string
+    public function getBillableMode(): ?string
     {
         return $this->billableMode;
     }
 
     /**
-     * @param string $billableMode
+     * @param string|null $billableMode
      */
-    public function setBillableMode(string $billableMode): void
+    public function setBillableMode(?string $billableMode): void
     {
         $this->billableMode = $billableMode;
     }
@@ -423,9 +443,34 @@ class PeriodInsert
 
     /**
      * @param bool $exported
+     * @return PeriodInsert
      */
-    public function setExported(bool $exported): void
+    public function setExported(bool $exported): PeriodInsert
     {
         $this->exported = $exported;
+
+        return $this;
+    }
+
+    /**
+     * @return DateTimeImmutable[]
+     */
+    public function getValidDays(): array
+    {
+        return $this->validDays;
+    }
+
+    /**
+     * @param DateTime
+     * @return PeriodInsert
+     */
+    public function addValidDay(DateTime $day): PeriodInsert
+    {
+        if (in_array($day, $this->validDays)) {
+            return $this;
+        }
+        $this->validDays[] = DateTimeImmutable::createFromMutable($day);
+
+        return $this;
     }
 }

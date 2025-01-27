@@ -1,8 +1,7 @@
 <?php
 
 $fileHeaderComment = <<<COMMENT
-This file is part of the "Custom CSS Bundle" for Kimai.
-All rights reserved by Kevin Papst (www.kevinpapst.de).
+This file is part of the "PeriodInsertBundle" for Kimai.
 
 For the full copyright and license information, please view the LICENSE
 file that was distributed with this source code.

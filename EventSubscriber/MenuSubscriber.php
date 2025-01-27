@@ -14,7 +14,7 @@ use App\Utils\MenuItemModel;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use Symfony\Component\Security\Core\Authorization\AuthorizationCheckerInterface;
 
-class MenuSubscriber implements EventSubscriberInterface
+final class MenuSubscriber implements EventSubscriberInterface
 {
     private $security;
 
@@ -23,6 +23,9 @@ class MenuSubscriber implements EventSubscriberInterface
         $this->security = $security;
     }
 
+    /**
+     * @return array<string, array<mixed>>
+     */
     public static function getSubscribedEvents(): array
     {
         return [
@@ -30,6 +33,9 @@ class MenuSubscriber implements EventSubscriberInterface
         ];
     }
 
+    /**
+     * @param ConfigureMainMenuEvent $event
+     */
     public function onMenuConfigure(ConfigureMainMenuEvent $event): void
     {
         $auth = $this->security;

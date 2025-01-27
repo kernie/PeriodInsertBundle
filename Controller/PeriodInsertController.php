@@ -14,8 +14,9 @@ use App\Controller\AbstractController;
 use App\Entity\Timesheet;
 use App\Timesheet\TimesheetService;
 use App\Utils\PageSetup;
+use App\Validator\ValidationFailedException;
 use KimaiPlugin\PeriodInsertBundle\Entity\PeriodInsert;
-use KimaiPlugin\PeriodInsertBundle\Form\PeriodInsertType;
+use KimaiPlugin\PeriodInsertBundle\Form\PeriodInsertForm;
 use KimaiPlugin\PeriodInsertBundle\Repository\PeriodInsertRepository;
 use Symfony\Component\Form\FormInterface;
 use Symfony\Component\HttpFoundation\Request;
@@ -25,93 +26,76 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 
 #[Route(path: '/period_insert')]
 #[IsGranted('period_insert')]
-class PeriodInsertController extends AbstractController
+final class PeriodInsertController extends AbstractController
 {
     public function __construct(
         protected PeriodInsertRepository $repository,
-        protected TimesheetService $service,
+        protected TimesheetService $timesheetService,
         protected SystemConfiguration $configuration
-    ) {
+    )
+    {
     }
 
+    /**
+     * @param Request $request
+     * @return Response
+     */
     #[Route(path: '', name: 'period_insert', methods: ['GET', 'POST'])]
     public function indexAction(Request $request): Response
     {
-        $entry = $this->service->createNewTimesheet($this->getUser(), $request);
+        $timesheet = $this->timesheetService->createNewTimesheet($this->getUser(), $request);
 
-        $entity = $this->repository->getTimesheet();
-        $entity->setUser($this->getUser());
+        $periodInsert = new PeriodInsert();
+        $periodInsert->setUser($this->getUser());
+        if (!$this->timesheetService->getActiveTrackingMode()->canEditBegin()) {
+            $periodInsert->setBeginTime($timesheet->getBegin());
+        }
 
-        $form = $this->getInsertForm($entity, $entry);
+        $form = $this->getInsertForm($periodInsert, $timesheet);
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
-            /** @var PeriodInsert $entity */
-            $entity = $form->getData();
-            if ($this->service->getActiveTrackingMode()->getId() === 'duration_fixed_begin') {
-                $entity->setBeginTime($entry->getBegin());
-            }
-            $entity->setFields();
-            
-            if (($dayToInsert = $this->repository->findDayToInsert($entity)) === '') {
-                $this->flashError('Could not find a day to insert in the given time range.');
-            }
-            else if ($this->repository->checkFutureTime($entity, $dayToInsert)) {
-                $this->flashError('The time range cannot be in the future.');
-            }
-            else if ($this->repository->checkZeroDuration($entity)) {
-                $this->flashError('Duration cannot be zero.');
-            }
-            else if (($overlap = $this->repository->checkOverlappingTimeEntries($entity)) !== '') {
-                $this->flashError('You already have an entry on ' . $overlap . '.');
-            }
-            else if (($message = $this->repository->checkBudgetOverbooked($entity)) !== '') {
-                $this->flashError($message);
-            }
-            else {
-                try {
-                    $this->repository->saveTimesheet($entity);
-                    $this->flashSuccess('action.update.success');
-
-                    return $this->redirectToRoute('period_insert');
-                } catch (\Exception $ex) {
-                    $this->flashUpdateException($ex);
-                }
+            try {
+                $this->repository->savePeriodInsert($periodInsert);
+                $this->flashSuccess('action.update.success');
+                
+                return $this->redirectToRoute('period_insert');
+            } catch (ValidationFailedException $ex) {
+                $this->handleFormUpdateException($ex, $form);
             }
         }
 
         return $this->render('@PeriodInsert/index.html.twig', [
             'page_setup' => $this->createPageSetup(),
             'route_back' => 'timesheet',
-            'entity' => $entity,
+            'period_insert' => $periodInsert,
             'form' => $form->createView(),
         ]);
     }
 
     /**
-     * @param PeriodInsert $entity
-     * @param Timesheet $entry
+     * @param PeriodInsert $periodInsert
+     * @param Timesheet $timesheet
      * @return FormInterface
      */
-    protected function getInsertForm(PeriodInsert $entity, Timesheet $entry): FormInterface
+    private function getInsertForm(PeriodInsert $periodInsert, Timesheet $timesheet): FormInterface
     {
-        return $this->createForm(PeriodInsertType::class, $entity, [
+        return $this->createForm(PeriodInsertForm::class, $periodInsert, [
             'action' => $this->generateUrl('period_insert'),
-            'include_user' => $this->isGranted('ROLE_SUPER_ADMIN'),
-            'include_rate' => $this->isGranted('edit_rate', $entry),
-            'include_billable' => $this->isGranted('edit_billable', $entry),
-            'include_exported' => $this->isGranted('edit_export', $entry),
-            'allow_begin_datetime' => $this->service->getActiveTrackingMode()->canEditBegin(),
+            'include_user' => $this->isGranted('create_other_timesheet'),
+            'include_rate' => $this->isGranted('edit_rate', $timesheet),
+            'include_billable' => $this->isGranted('edit_billable', $timesheet),
+            'include_exported' => $this->isGranted('edit_export', $timesheet),
+            'allow_begin_datetime' => $this->timesheetService->getActiveTrackingMode()->canEditBegin(),
             'duration_minutes' => $this->configuration->getTimesheetIncrementDuration(),
             'timezone' => $this->getDateTimeFactory()->getTimezone()->getName(),
-            'customer' => true,
         ]);
     }
 
     /**
      * @return PageSetup
      */
-    protected function createPageSetup(): PageSetup
+    private function createPageSetup(): PageSetup
     {
         $page = new PageSetup('periodinsert.title');
         $page->setHelp('https://www.kimai.org/store/lnngyn-period-insert-bundle.html');

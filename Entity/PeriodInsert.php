@@ -42,6 +42,7 @@ class PeriodInsert
     private array $days = [true, true, true, true, true, true, true];
     private ?float $fixedRate = null;
     private ?float $hourlyRate = null;
+    private ?float $internalRate = null;
     private bool $billable = true;
     private ?string $billableMode = Timesheet::BILLABLE_AUTOMATIC;
     private bool $exported = false;
@@ -394,6 +395,25 @@ class PeriodInsert
     public function setHourlyRate(?float $hourlyRate): PeriodInsert
     {
         $this->hourlyRate = $hourlyRate;
+
+        return $this;
+    }
+
+    /**
+     * @return float|null
+     */
+    public function getInternalRate(): ?float
+    {
+        return $this->internalRate;
+    }
+
+    /**
+     * @param float|null $internalRate
+     * @return PeriodInsert
+     */
+    public function setInternalRate(?float $internalRate): PeriodInsert
+    {
+        $this->internalRate = $internalRate;
 
         return $this;
     }

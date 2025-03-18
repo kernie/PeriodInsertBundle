@@ -76,6 +76,10 @@ class PeriodInsertRepository
         if (null !== $periodInsert->getHourlyRate()) {
             $timesheet->setHourlyRate($periodInsert->getHourlyRate());
         }
+
+        if (null !== $periodInsert->getInternalRate()) {
+            $timesheet->setInternalRate($periodInsert->getInternalRate());
+        }
         
         $timesheet->setBillable($periodInsert->isBillable());
         $timesheet->setBillableMode($periodInsert->getBillableMode());

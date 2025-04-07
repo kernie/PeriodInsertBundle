@@ -114,7 +114,7 @@ final class PeriodInsertForm extends TimesheetEditForm
         $this->addBillable($builder, $options);
         $this->addExported($builder, $options);
 
-        // find days that will be inserted by the period insert (by default, selected + no absences + work day)
+        // find days that will be inserted by the period insert (by default, selected + no absences + working day)
         $builder->addEventListener(
             FormEvents::SUBMIT,
             function (FormEvent $event) {

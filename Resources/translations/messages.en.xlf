@@ -10,6 +10,14 @@
                 <source>periodinsert.title</source>
                 <target>Create timesheet entries for a period</target>
             </trans-unit>
+            <trans-unit id="periodinsert.include_nonworkdays">
+                <source>periodinsert.include_nonworkdays</source>
+                <target>Create time entries on non-work days</target>
+            </trans-unit>
+            <trans-unit id="periodinsert.include_absences">
+                <source>periodinsert.include_absences</source>
+                <target>Create time entries on absences</target>
+            </trans-unit>
         </body>
     </file>
 </xliff>

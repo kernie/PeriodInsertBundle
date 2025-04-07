@@ -121,16 +121,21 @@ final class PeriodInsertForm extends TimesheetEditForm
                 /** @var PeriodInsert $periodInsert */
                 $periodInsert = $event->getData();
 
+                $includeAbsences = (bool) $this->systemConfiguration->find('periodinsert.include_absences');
                 $currentMonth = '';
+                $absences = [];
+
+                $includeNonWorkdays = (bool) $this->systemConfiguration->find('periodinsert.include_nonworkdays');
+                $contractModeCalculator = $this->workService->getContractMode($periodInsert->getUser())->getCalculator($periodInsert->getUser());
                 
-                for ($begin = clone $periodInsert->getBegin(), $end = $periodInsert->getEnd(); $begin <= $end; $begin->modify('+1 day')) {
-                    if ($currentMonth !== $begin->format('Y-m')) {
+                for ($begin = clone $periodInsert->getBegin(), $end = $periodInsert->getEnd(); $begin <= $end; $begin->modify('+1 day')) {                    
+                    if (!$includeAbsences && $currentMonth !== $begin->format('Y-m')) {
                         /** @var DateTime[] $absences */
                         $absences = [];
                         $month = $this->workService->getMonth($periodInsert->getUser(), $begin, $end);
 
                         foreach ($month->getDays() as $day) {
-                            if ($day->hasAddons() || !$this->workService->getContractMode($periodInsert->getUser())->getCalculator($periodInsert->getUser())->isWorkDay($day->getDay())) {
+                            if ($day->hasAddons()) {
                                 $absences[] = $day->getDay()->format('Y-m-d');
                             }
                         }
@@ -138,7 +143,7 @@ final class PeriodInsertForm extends TimesheetEditForm
                         $currentMonth = $begin->format('Y-m');
                     }
 
-                    if ($periodInsert->isDaySelected($begin) && !in_array($begin->format('Y-m-d'), $absences)) {
+                    if ($periodInsert->isDaySelected($begin) && ($includeNonWorkdays || $contractModeCalculator->isWorkDay($begin)) && ($includeAbsences ||  !in_array($begin->format('Y-m-d'), $absences))) {
                         $periodInsert->addValidDay($begin);
                     }
                 }

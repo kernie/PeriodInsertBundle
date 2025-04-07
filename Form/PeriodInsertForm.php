@@ -13,6 +13,7 @@ use App\Configuration\SystemConfiguration;
 use App\Entity\Customer;
 use App\Entity\Timesheet;
 use App\Form\TimesheetEditForm;
+use App\Form\Type\CustomerType;
 use App\Form\Type\DateRangeType;
 use App\Form\Type\DescriptionType;
 use App\Form\Type\DurationType;
@@ -45,8 +46,28 @@ final class PeriodInsertForm extends TimesheetEditForm
      */
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
+        $activity = null;
+        $project = null;
+        $customer = null;
         $currency = false;
         $isNew = true;
+
+        if (isset($options['data'])) {
+            /** @var PeriodInsert $periodInsert */
+            $periodInsert = $options['data'];
+
+            $activity = $periodInsert->getActivity();
+            $project = $periodInsert->getProject();
+            $customer = $project?->getCustomer();
+
+            if (null === $project && null !== $activity) {
+                $project = $activity->getProject();
+            }
+
+            if (null !== $customer) {
+                $currency = $customer->getCurrency();
+            }
+        }
 
         $this->addUser($builder, $options);
         $this->addDateRange($builder, $options);
@@ -65,11 +86,18 @@ final class PeriodInsertForm extends TimesheetEditForm
         $customerCount = \count($customers);
 
         if ($this->showCustomer($options, $isNew, $customerCount)) {
-            $this->addCustomer($builder);
+            $builder->add('customer', CustomerType::class, [
+                'choices' => $customers,
+                'data' => $customer,
+                'required' => false,
+                'placeholder' => '',
+                'mapped' => false,
+                'project_enabled' => true,
+            ]);
         }
         
-        $this->addProject($builder, $isNew);
-        $this->addActivity($builder);
+        $this->addProject($builder, $isNew, $project, $customer);
+        $this->addActivity($builder, $activity, $project);
 
         $builder->add('description', DescriptionType::class, ['required' => false]);
         $builder->add('tags', TagsType::class, ['required' => false]);

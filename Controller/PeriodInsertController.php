@@ -52,6 +52,11 @@ final class PeriodInsertController extends AbstractController
             $periodInsert->setBeginTime($timesheet->getBegin());
         }
 
+        $preForm = $this->createFormForGetRequest(PeriodInsertPreCreateForm::class, $periodInsert, [
+            'include_user' => $this->isGranted('create_other_timesheet'),
+        ]);
+        $preForm->submit($request->query->all(), false);
+
         $form = $this->getInsertForm($periodInsert, $timesheet);
         $form->handleRequest($request);
 

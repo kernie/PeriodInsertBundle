@@ -13,6 +13,7 @@ use App\Form\FormTrait;
 use App\Form\Type\DescriptionType;
 use App\Form\Type\TagsInputType;
 use App\Form\Type\UserType;
+use App\Form\Type\YesNoType;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
@@ -30,13 +31,23 @@ final class PeriodInsertPreCreateForm extends AbstractType
      */
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
-        $this->addProject($builder, true, null, null, ['required' => false]);
-        $this->addActivity($builder, null, null, ['required' => false]);
-        $builder->add('description', DescriptionType::class, ['required' => false]);
-        $builder->add('tags', TagsInputType::class, ['required' => false]);
         if ($options['include_user']) {
             $builder->add('user', UserType::class, ['required' => false]);
         }
+        
+        $this->addProject($builder, true, null, null, ['required' => false]);
+        $this->addActivity($builder, null, null, ['required' => false]);
+
+        $builder->add('description', DescriptionType::class, ['required' => false]);
+        $builder->add('tags', TagsInputType::class, ['required' => false]);
+
+        $builder->add('monday', YesNoType::class)
+            ->add('tuesday', YesNoType::class)
+            ->add('wednesday', YesNoType::class)
+            ->add('thursday', YesNoType::class)
+            ->add('friday', YesNoType::class)
+            ->add('saturday', YesNoType::class)
+            ->add('sunday', YesNoType::class);
     }
 
     /**

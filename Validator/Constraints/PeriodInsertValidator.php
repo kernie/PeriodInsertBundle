@@ -252,7 +252,6 @@ final class PeriodInsertValidator extends ConstraintValidator
 
         $validDays = $periodInsert->getValidDays();
         $lastValidDay = end($validDays);
-
         $now = new DateTime('now', $lastValidDay->getTimezone());
 
         if ($lastValidDay->format('Y-m-d') < $now->format('Y-m-d')) {
@@ -347,12 +346,8 @@ final class PeriodInsertValidator extends ConstraintValidator
         $duration = $periodInsert->getDuration();
 
         $this->checkBudgetsForEntity($validDaysPerMonth, $recordDate, $now, $periodInsert, $rate, $duration, $periodInsert->getActivity(), $this->activityStatisticService, 'activity');
-
         $this->checkBudgetsForEntity($validDaysPerMonth, $recordDate, $now, $periodInsert, $rate, $duration, $project, $this->projectStatisticService, 'project');
-
-        if (null !== $project) {
-            $this->checkBudgetsForEntity($validDaysPerMonth, $recordDate, $now, $periodInsert, $rate, $duration, $project->getCustomer(), $this->customerStatisticService, 'customer');
-        }
+        $this->checkBudgetsForEntity($validDaysPerMonth, $recordDate, $now, $periodInsert, $rate, $duration, $project->getCustomer(), $this->customerStatisticService, 'customer');
     }
 
     /**
@@ -368,19 +363,25 @@ final class PeriodInsertValidator extends ConstraintValidator
      */
     private function checkBudgetsForEntity(array $validDaysPerMonth, DateTimeImmutable $recordDate, DateTime $now, PeriodInsertEntity $periodInsert, float $rate, int $duration, mixed $entity, mixed $statisticService, string $type): void
     {
-        if (null !== $entity && $entity->hasBudgets()) {
-            if ($entity->isMonthlyBudget()) {
-                // check budget for each month of the period insert
-                foreach ($validDaysPerMonth as $month => $validDaysInMonth) {
-                    $stat = $statisticService->getBudgetStatisticModel($entity, $recordDate);
-                    $this->checkBudgets($stat, $periodInsert, $rate, $duration, $validDaysInMonth, $type, $month);
+        if (null === $entity) {
+            return;
+        }
 
-                    $recordDate->modify('+1 month');
-                }
-            } else {
-                $stat = $statisticService->getBudgetStatisticModel($entity, $now);
-                $this->checkBudgets($stat, $periodInsert, $rate, $duration, \count($periodInsert->getValidDays()), $type);
+        if (!$entity->hasBudgets()) {
+            return;
+        }
+
+        if ($entity->isMonthlyBudget()) {
+            // check budget for each month of the period insert
+            foreach ($validDaysPerMonth as $month => $validDaysInMonth) {
+                $stat = $statisticService->getBudgetStatisticModel($entity, $recordDate);
+                $this->checkBudgets($stat, $periodInsert, $rate, $duration, $validDaysInMonth, $type, $month);
+
+                $recordDate->modify('+1 month');
             }
+        } else {
+            $stat = $statisticService->getBudgetStatisticModel($entity, $now);
+            $this->checkBudgets($stat, $periodInsert, $rate, $duration, \count($periodInsert->getValidDays()), $type);
         }
     }
 

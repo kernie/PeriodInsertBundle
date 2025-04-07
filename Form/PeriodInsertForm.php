@@ -114,7 +114,7 @@ final class PeriodInsertForm extends TimesheetEditForm
         $this->addBillable($builder, $options);
         $this->addExported($builder, $options);
 
-        // find days that will be inserted by the period insert (selected + no absences + on a work day)
+        // find days that will be inserted by the period insert (by default, selected + no absences + work day)
         $builder->addEventListener(
             FormEvents::SUBMIT,
             function (FormEvent $event) {
@@ -143,7 +143,7 @@ final class PeriodInsertForm extends TimesheetEditForm
                         $currentMonth = $begin->format('Y-m');
                     }
 
-                    if ($periodInsert->isDaySelected($begin) && ($includeNonWorkdays || $contractModeCalculator->isWorkDay($begin)) && ($includeAbsences ||  !in_array($begin->format('Y-m-d'), $absences))) {
+                    if ($periodInsert->isDaySelected($begin) && ($includeAbsences || !in_array($begin->format('Y-m-d'), $absences)) && ($includeNonWorkdays || $contractModeCalculator->isWorkDay($begin))) {
                         $periodInsert->addValidDay($begin);
                     }
                 }

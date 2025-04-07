@@ -24,6 +24,10 @@ final class PeriodInsertPreCreateForm extends AbstractType
 {
     use FormTrait;
 
+    /**
+     * @param FormBuilderInterface $builder
+     * @param array<string, string|bool|int|null|array<string, mixed>> $options
+     */
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
         $this->addProject($builder, true, null, null, ['required' => false]);
@@ -35,13 +39,16 @@ final class PeriodInsertPreCreateForm extends AbstractType
         }
     }
 
+    /**
+     * @param OptionsResolver $resolver
+     */
     public function configureOptions(OptionsResolver $resolver): void
     {
         $resolver->setDefaults([
             'csrf_protection' => false,
             'include_user' => false,
             'method' => 'GET',
-            'validation_groups' => ['none'] // otherwise the default timesheet validations would trigger
+            'validation_groups' => ['none'] // otherwise the default period insert validations would trigger
         ]);
     }
 }

@@ -18,6 +18,9 @@ use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 
 final class SystemConfigurationSubscriber implements EventSubscriberInterface
 {
+    /**
+     * @return array<string, array<mixed>>
+     */
     public static function getSubscribedEvents(): array
     {
         return [
@@ -25,17 +28,20 @@ final class SystemConfigurationSubscriber implements EventSubscriberInterface
         ];
     }
 
+    /**
+     * @param SystemConfigurationEvent $event
+     */
     public function onSystemConfiguration(SystemConfigurationEvent $event): void
     {
         $event->addConfiguration(
             (new SystemConfiguration('periodinsert'))
             ->setTranslationDomain('messages')
             ->setConfiguration([
-                (new Configuration('periodinsert.include_nonworkdays'))
-                    ->setLabel('periodinsert.include_nonworkdays')
-                    ->setType(YesNoType::class),
                 (new Configuration('periodinsert.include_absences'))
                     ->setLabel('periodinsert.include_absences')
+                    ->setType(YesNoType::class),
+                (new Configuration('periodinsert.include_nonworkdays'))
+                    ->setLabel('periodinsert.include_nonworkdays')
                     ->setType(YesNoType::class),
             ])
         );

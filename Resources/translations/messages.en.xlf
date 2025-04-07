@@ -2,12 +2,12 @@
 <xliff version="1.2" xmlns="urn:oasis:names:tc:xliff:document:1.2">
     <file source-language="en" target-language="en" datatype="plaintext" original="none">
         <body>
-            <trans-unit id="periodinsert.title">
-                <source>periodinsert.title</source>
+            <trans-unit id="periodinsert">
+                <source>periodinsert</source>
                 <target>Period Insert</target>
             </trans-unit>
-            <trans-unit id="periodinsert.subtitle">
-                <source>periodinsert.subtitle</source>
+            <trans-unit id="periodinsert.title">
+                <source>periodinsert.title</source>
                 <target>Create timesheet entries for a period</target>
             </trans-unit>
         </body>

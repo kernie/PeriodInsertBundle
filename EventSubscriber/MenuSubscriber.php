@@ -48,7 +48,7 @@ final class MenuSubscriber implements EventSubscriberInterface
 
         if ($auth->isGranted('ROLE_SUPER_ADMIN') || $auth->isGranted('period_insert')) {
             $menu->addChild(
-                new MenuItemModel('period_insert', 'periodinsert.title', 'period_insert', [], 'fas fa-clone')
+                new MenuItemModel('period_insert', 'periodinsert', 'period_insert', [], 'fas fa-clone')
             );
         }
     }

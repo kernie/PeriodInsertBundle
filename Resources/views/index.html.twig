@@ -3,7 +3,7 @@
 {% block main %}
     {{ include('@PeriodInsert/form.html.twig', {
         'template': kimai_context.modalRequest ? 'default/_form_modal.html.twig' : 'default/_form.html.twig',
-        'title': 'periodinsert.subtitle'|trans,
+        'title': 'periodinsert.title'|trans,
         'form': form,
         'back': path(route_back)
     }) }}

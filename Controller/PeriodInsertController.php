@@ -17,6 +17,7 @@ use App\Utils\PageSetup;
 use App\Validator\ValidationFailedException;
 use KimaiPlugin\PeriodInsertBundle\Entity\PeriodInsert;
 use KimaiPlugin\PeriodInsertBundle\Form\PeriodInsertForm;
+use KimaiPlugin\PeriodInsertBundle\Form\PeriodInsertPreCreateForm;
 use KimaiPlugin\PeriodInsertBundle\Repository\PeriodInsertRepository;
 use Symfony\Component\Form\FormInterface;
 use Symfony\Component\HttpFoundation\Request;
@@ -50,6 +51,11 @@ final class PeriodInsertController extends AbstractController
         if (!$this->timesheetService->getActiveTrackingMode()->canEditBegin()) {
             $periodInsert->setBeginTime($timesheet->getBegin());
         }
+
+        $preForm = $this->createFormForGetRequest(PeriodInsertPreCreateForm::class, $periodInsert, [
+            'include_user' => $this->isGranted('create_other_timesheet'),
+        ]);
+        $preForm->submit($request->query->all(), false);
 
         $form = $this->getInsertForm($periodInsert, $timesheet);
         $form->handleRequest($request);
@@ -97,7 +103,7 @@ final class PeriodInsertController extends AbstractController
      */
     private function createPageSetup(): PageSetup
     {
-        $page = new PageSetup('periodinsert.title');
+        $page = new PageSetup('periodinsert');
         $page->setHelp('https://www.kimai.org/store/lnngyn-period-insert-bundle.html');
 
         return $page;

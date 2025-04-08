@@ -3,7 +3,7 @@
     "description": "A plugin for Kimai which generates entries for a given time-period.",
     "homepage": "https://github.com/lnNgyn1/PeriodInsertBundle",
     "type": "kimai-plugin",
-    "version": "1.4",
+    "version": "1.5",
     "keywords": [
         "kimai",
         "kimai-plugin"

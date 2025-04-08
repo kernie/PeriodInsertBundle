@@ -13,6 +13,7 @@ use App\Configuration\SystemConfiguration;
 use App\Entity\Customer;
 use App\Entity\Timesheet;
 use App\Form\TimesheetEditForm;
+use App\Form\Type\CustomerType;
 use App\Form\Type\DateRangeType;
 use App\Form\Type\DescriptionType;
 use App\Form\Type\DurationType;
@@ -45,8 +46,28 @@ final class PeriodInsertForm extends TimesheetEditForm
      */
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
+        $activity = null;
+        $project = null;
+        $customer = null;
         $currency = false;
         $isNew = true;
+
+        if (isset($options['data'])) {
+            /** @var PeriodInsert $periodInsert */
+            $periodInsert = $options['data'];
+
+            $activity = $periodInsert->getActivity();
+            $project = $periodInsert->getProject();
+            $customer = $project?->getCustomer();
+
+            if (null === $project && null !== $activity) {
+                $project = $activity->getProject();
+            }
+
+            if (null !== $customer) {
+                $currency = $customer->getCurrency();
+            }
+        }
 
         $this->addUser($builder, $options);
         $this->addDateRange($builder, $options);
@@ -65,11 +86,18 @@ final class PeriodInsertForm extends TimesheetEditForm
         $customerCount = \count($customers);
 
         if ($this->showCustomer($options, $isNew, $customerCount)) {
-            $this->addCustomer($builder);
+            $builder->add('customer', CustomerType::class, [
+                'choices' => $customers,
+                'data' => $customer,
+                'required' => false,
+                'placeholder' => '',
+                'mapped' => false,
+                'project_enabled' => true,
+            ]);
         }
         
-        $this->addProject($builder, $isNew);
-        $this->addActivity($builder);
+        $this->addProject($builder, $isNew, $project, $customer);
+        $this->addActivity($builder, $activity, $project);
 
         $builder->add('description', DescriptionType::class, ['required' => false]);
         $builder->add('tags', TagsType::class, ['required' => false]);
@@ -86,31 +114,35 @@ final class PeriodInsertForm extends TimesheetEditForm
         $this->addBillable($builder, $options);
         $this->addExported($builder, $options);
 
-        // find days that will be inserted by the period insert (selected + no absences + on a work day)
+        // find days that will be inserted by the period insert (by default, selected + no absences + working day)
         $builder->addEventListener(
             FormEvents::SUBMIT,
             function (FormEvent $event) {
                 /** @var PeriodInsert $periodInsert */
                 $periodInsert = $event->getData();
 
+                $includeAbsences = (bool) $this->systemConfiguration->find('periodinsert.include_absences');
                 $currentMonth = '';
+                $absences = [];
+
+                $includeNonWorkdays = (bool) $this->systemConfiguration->find('periodinsert.include_nonworkdays');
+                $contractModeCalculator = $this->workService->getContractMode($periodInsert->getUser())->getCalculator($periodInsert->getUser());
                 
-                for ($begin = clone $periodInsert->getBegin(), $end = $periodInsert->getEnd(); $begin <= $end; $begin->modify('+1 day')) {
-                    if ($currentMonth !== $begin->format('Y-m')) {
+                for ($begin = clone $periodInsert->getBegin(), $end = $periodInsert->getEnd(); $begin <= $end; $begin->modify('+1 day')) {                    
+                    if (!$includeAbsences && $currentMonth !== $begin->format('Y-m')) {
                         /** @var DateTime[] $absences */
                         $absences = [];
                         $month = $this->workService->getMonth($periodInsert->getUser(), $begin, $end);
+                        $currentMonth = $begin->format('Y-m');
 
                         foreach ($month->getDays() as $day) {
-                            if ($day->hasAddons() || !$this->workService->getContractMode($periodInsert->getUser())->getCalculator($periodInsert->getUser())->isWorkDay($day->getDay())) {
+                            if ($day->hasAddons()) {
                                 $absences[] = $day->getDay()->format('Y-m-d');
                             }
                         }
-
-                        $currentMonth = $begin->format('Y-m');
                     }
 
-                    if ($periodInsert->isDaySelected($begin) && !in_array($begin->format('Y-m-d'), $absences)) {
+                    if ($periodInsert->isDaySelected($begin) && ($includeAbsences || !in_array($begin->format('Y-m-d'), $absences)) && ($includeNonWorkdays || $contractModeCalculator->isWorkDay($begin))) {
                         $periodInsert->addValidDay($begin);
                     }
                 }

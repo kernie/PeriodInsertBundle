@@ -133,14 +133,13 @@ final class PeriodInsertForm extends TimesheetEditForm
                         /** @var DateTime[] $absences */
                         $absences = [];
                         $month = $this->workService->getMonth($periodInsert->getUser(), $begin, $end);
+                        $currentMonth = $begin->format('Y-m');
 
                         foreach ($month->getDays() as $day) {
                             if ($day->hasAddons()) {
                                 $absences[] = $day->getDay()->format('Y-m-d');
                             }
                         }
-
-                        $currentMonth = $begin->format('Y-m');
                     }
 
                     if ($periodInsert->isDaySelected($begin) && ($includeAbsences || !in_array($begin->format('Y-m-d'), $absences)) && ($includeNonWorkdays || $contractModeCalculator->isWorkDay($begin))) {

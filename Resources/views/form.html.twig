@@ -29,6 +29,9 @@
             {% if form.tags is defined %}
                 {{ form_row(form.tags, {'row_attr': {'class': 'mb-3 ' ~ form.vars.name ~ '_row_' ~ form.tags.vars.name}}) }}
             {% endif %}
+            {% if form.metaFields is defined and form.metaFields is not empty %}
+                {{ form_row(form.metaFields) }}
+            {% endif %}
             {% embed '@theme/embeds/collapsible.html.twig' with {id: 'period_insert_select_days'} %}
                 {% import "macros/widgets.html.twig" as widgets %}
                 {% block title %}{{ 'Select days'|trans }}{% endblock %}

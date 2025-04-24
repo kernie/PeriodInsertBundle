@@ -17,6 +17,7 @@ use App\Form\Type\CustomerType;
 use App\Form\Type\DateRangeType;
 use App\Form\Type\DescriptionType;
 use App\Form\Type\DurationType;
+use App\Form\Type\MetaFieldsCollectionType;
 use App\Form\Type\TagsType;
 use App\Form\Type\TimePickerType;
 use App\Form\Type\TimesheetBillableType;
@@ -101,6 +102,7 @@ final class PeriodInsertForm extends TimesheetEditForm
 
         $builder->add('description', DescriptionType::class, ['required' => false]);
         $builder->add('tags', TagsType::class, ['required' => false]);
+        $builder->add('metaFields', MetaFieldsCollectionType::class);
 
         $builder->add('monday', YesNoType::class)
             ->add('tuesday', YesNoType::class)

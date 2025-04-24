@@ -69,6 +69,12 @@ class PeriodInsertRepository
             $timesheet->addTag($tag);
         }
 
+        foreach ($periodInsert->getMetaFields() as $meta) {
+            $tmp = clone $meta;
+            $tmp->setEntity($timesheet);
+            $timesheet->setMetaField($tmp);
+        }
+
         if (null !== $periodInsert->getFixedRate()) {
             $timesheet->setFixedRate($periodInsert->getFixedRate());
         }

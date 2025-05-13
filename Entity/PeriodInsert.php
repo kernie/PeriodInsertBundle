@@ -13,10 +13,12 @@ use App\Entity\Activity;
 use App\Entity\Project;
 use App\Entity\Tag;
 use App\Entity\Timesheet;
+use App\Entity\TimesheetMeta;
 use App\Entity\User;
 use App\Form\Model\DateRange;
 use DateTime;
 use DateTimeImmutable;
+use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use KimaiPlugin\PeriodInsertBundle\Validator\Constraints as Constraints;
 
@@ -37,6 +39,12 @@ class PeriodInsert
      */
     private Collection $tags;
     /**
+     * Meta fields registered with the timesheet
+     *
+     * @var Collection<TimesheetMeta>
+     */
+    private Collection $meta;
+    /**
      * @var bool[]
      */
     private array $days = [true, true, true, true, true, true, true];
@@ -50,6 +58,12 @@ class PeriodInsert
      * @var DateTimeImmutable[]
      */
     private array $validDays = [];
+
+    public function __construct()
+    {
+        $this->tags = new ArrayCollection();
+        $this->meta = new ArrayCollection();
+    }
 
     /**
      * @return User|null
@@ -215,6 +229,25 @@ class PeriodInsert
     public function setTags(Collection $tags): PeriodInsert
     {
         $this->tags = $tags;
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<TimesheetMeta>
+     */
+    public function getMetaFields(): Collection
+    {
+        return $this->meta;
+    }
+
+    /**
+     * @param Collection<TimesheetMeta> $meta
+     * @return PeriodInsert
+     */
+    public function setMetaFields(Collection $meta): PeriodInsert
+    {
+        $this->meta = $meta;
 
         return $this;
     }

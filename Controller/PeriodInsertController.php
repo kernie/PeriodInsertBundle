@@ -48,6 +48,7 @@ final class PeriodInsertController extends AbstractController
 
         $periodInsert = new PeriodInsert();
         $periodInsert->setUser($this->getUser());
+        $periodInsert->setMetaFields($timesheet->getMetaFields());
         if (!$this->timesheetService->getActiveTrackingMode()->canEditBegin()) {
             $periodInsert->setBeginTime($timesheet->getBegin());
         }

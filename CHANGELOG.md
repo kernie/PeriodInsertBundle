@@ -2,14 +2,14 @@
 
 Compatible with Kimai version 2.26.0 or higher.
 
-- Added meta fields to address #18
+- Added meta fields to address [#18](https://github.com/lnNgyn1/PeriodInsertBundle/issues/18)
 - Added change log
 
 # Version 1.5
 
 Compatible with Kimai version 2.26.0 or higher.
 
-- Added internal rate field to address #16
+- Added internal rate field to address [#16](https://github.com/lnNgyn1/PeriodInsertBundle/issues/16)
 - Added `PeriodInsertPreCreateForm` to allow values (user, project, activity, description, tags, select days) to be preset by URL
 - Added options to system configuration menu to allow creating time entries on absences and non-work days
 - Miscellaneous formatting and code style changes
@@ -33,8 +33,8 @@ Compatible with Kimai version 2.26.0 or higher.
 
 Compatible with Kimai version 2.26.0 or higher.
 
-- Added work day and absences check to timesheet entry to address #9
-- Removed punch or time-clock tracking mode check to resolve #10
+- Added work day and absences check to timesheet entry to address [#9](https://github.com/lnNgyn1/PeriodInsertBundle/issues/9)
+- Removed punch or time-clock tracking mode check to resolve [#10](https://github.com/lnNgyn1/PeriodInsertBundle/issues/10)
 
 # Version 1.2
 
@@ -42,7 +42,7 @@ Compatible with Kimai version 2.1.0 or higher.
 
 ### Changes
  - Applied time tracking settings to period insert
-   - Allow overlapping time entries option to address #4
+   - Allow overlapping time entries option to address [#4](https://github.com/lnNgyn1/PeriodInsertBundle/issues/4)
    - Allow time entries in the future option
    - Allow time entries with an empty duration option
    - Allow overbooking of stored budgets option
@@ -64,7 +64,7 @@ Compatible with Kimai version 2.1.0 or higher.
 Compatible with Kimai version 2.1.0 or higher.
 
 ### Changes
-- Added selection of specific days and begin time field to address #1. By default, they are selected.
+- Added selection of specific days and begin time field to address [#1](https://github.com/lnNgyn1/PeriodInsertBundle/issues/1). By default, they are selected.
 
 ### Minor fixes
 - Fixed visibility of tag item on form

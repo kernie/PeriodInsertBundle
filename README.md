@@ -4,9 +4,16 @@ A plugin for Kimai that generates entries for a given time period.
 
 ## Installation
 
-This plugin is compatible with Kimai version 2.26.0 or higher. Releases 1.0-1.2 are compatible with Kimai version 2.1.0 or higher.
+This plugin is compatible with the following Kimai releases:
 
-Download and extract the bundle in `var/plugins/` (see [plugin docs](https://www.kimai.org/documentation/plugin-management.html)).
+| Bundle version | Minimum Kimai version |
+|----------------|-----------------------|
+| 1.3 - 1.6      | 2.26.0                |
+| 1.0 - 1.2      | 2.1.0                 |
+
+You can find the most notable changes between the versions in the file [CHANGELOG.md](CHANGELOG.md).
+
+Download and extract the [compatible release](https://github.com/lnNgyn1/PeriodInsertBundle/releases) in `var/plugins/` (see [plugin docs](https://www.kimai.org/documentation/plugin-management.html)).
 
 The file structure needs to look like this afterwards:
 
